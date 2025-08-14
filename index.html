@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML — MVP</title>
+  <title>Очищувач HTML (MVP) — версія 2</title>
   <style>
     :root { --gap: 14px; --code-font-size: 14px; }
     * { box-sizing: border-box; }
@@ -53,7 +53,7 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP)</h1>
+    <h1>Очищувач HTML (MVP) — версія 2</h1>
   </header>
 
   <main class="wrap">
@@ -121,10 +121,11 @@
           <label><input type="checkbox" id="opt-remove-inline"> Видалити inline-стилі</label>
           <label><input type="checkbox" id="opt-remove-class-id"> Видалити класи та ID</label>
           <label><input type="checkbox" id="opt-remove-all-tags"> Видалити всі теги (залишити тільки текст)</label>
-          <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &nbsp;</label>
+          <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &amp;nbsp;</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
-          <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги з одним &nbsp;</label>
+          <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги, що містять лише &amp;nbsp;</label>
           <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;/&lt;div&gt; на &lt;p&gt;</label>
+          <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
           <label><input type="checkbox" id="opt-remove-links"> Видалити посилання (залишити текст)</label>
           <label><input type="checkbox" id="opt-remove-tables"> Розгорнути таблиці (залишити вміст)</label>
           <label><input type="checkbox" id="opt-table-to-empty-p"> Замінити теги таблиць на порожні &lt;p&gt;</label>
@@ -146,7 +147,21 @@
   </main>
 
   <script>
-    // --- ТУЛБАР: базові та популярні команди форматування ---
+    // Посилання на елементи інтерфейсу (не покладаємось на window.id)
+    const editor = document.getElementById('editor');
+    const codeArea = document.getElementById('code');
+    const undoBtn = document.getElementById('btnUndo');
+    const blockFormat = document.getElementById('blockFormat');
+    const fontSize = document.getElementById('fontSize');
+    const mkLink = document.getElementById('mkLink');
+    const rmLink = document.getElementById('rmLink');
+    const insImg = document.getElementById('insImg');
+    const clearFmt = document.getElementById('clearFmt');
+    const fontPlus = document.getElementById('fontPlus');
+    const fontMinus = document.getElementById('fontMinus');
+    const btnCopy = document.getElementById('btnCopy');
+
+// --- ТУЛБАР: базові та популярні команди форматування ---
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.execCommand(btn.dataset.cmd, false);
@@ -186,9 +201,6 @@
     });
 
     // --- ЖИВЕ ДЗЕРКАЛО HTML ---
-    const editor = document.getElementById('editor');
-    const codeArea = document.getElementById('code');
-    const undoBtn = document.getElementById('btnUndo');
     const undoStack = [];
 
     function syncToCode(){ codeArea.value = prettyHtml(editor.innerHTML); }
@@ -249,7 +261,6 @@
     function prettyHtml(html){
       try {
         html = String(html);
-        // Розбиваємо на токени «тег або текст» без важких регулярних виразів
         const tokens = [];
         let i = 0;
         while (i < html.length) {
