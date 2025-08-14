@@ -124,8 +124,7 @@
           <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &nbsp;</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
           <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги з одним &nbsp;</label>
-          <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;\/&lt;div&gt; на &lt;p&gt;<\/label>
-          <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
+          <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;/&lt;div&gt; на &lt;p&gt;</label>
           <label><input type="checkbox" id="opt-remove-links"> Видалити посилання (залишити текст)</label>
           <label><input type="checkbox" id="opt-remove-tables"> Розгорнути таблиці (залишити вміст)</label>
           <label><input type="checkbox" id="opt-table-to-empty-p"> Замінити теги таблиць на порожні &lt;p&gt;</label>
@@ -250,7 +249,7 @@
     function prettyHtml(html){
       try {
         html = String(html);
-        // розбиваємо на токени «тег або текст» без регулярок
+        // Розбиваємо на токени «тег або текст» без важких регулярних виразів
         const tokens = [];
         let i = 0;
         while (i < html.length) {
