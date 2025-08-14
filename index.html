@@ -3,26 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML (MVP) — версія 5</title>
+  <title>Очищувач HTML (MVP) — версія 6</title>
   <style>
-    /* ===== ТЕМИ (денна / нічна) ===== */
+    /* ===== ТЕМИ (нічна за замовчуванням / денна як у html-cleaner) ===== */
     :root{
       --gap:14px; --code-font-size:14px;
-
-      /* нічна (дефолт) */
+      /* нічна */
       --bg:#0b1020; --text:#e7ecf7; --muted:#8da0d0;
       --card:#0f1630; --card-2:#0e1431; --border:#1b2445; --border-2:#26325f;
       --mono:#0a112b; --btn:#2952ff; --btn2:#4669ff;
-
       /* підсвічування HTML */
       --tok-tag:#5ab0ff; --tok-attr:#c792ea; --tok-str:#a3e635; --tok-punc:#9aa7c7; --tok-text:#e7ecf7;
     }
     body.theme-light{
-      /* максимально близко к html-cleaner */
+      /* денна — максимально близько до html-cleaner */
       --bg:#ffffff; --text:#0b1220; --muted:#6b7280;
       --card:#ffffff; --card-2:#f3f6ff; --border:#dfe3ef; --border-2:#cfd6ea;
       --mono:#f7f8fb; --btn:#2b72ff; --btn2:#5b8dff;
-
       --tok-tag:#005cc5; --tok-attr:#6f42c1; --tok-str:#22863a; --tok-punc:#6a737d; --tok-text:#24292e;
     }
 
@@ -85,7 +82,7 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 3</h1>
+    <h1>Очищувач HTML (MVP) — версія 6</h1>
     <button id="themeToggle" type="button">🌙 Нічна тема</button>
   </header>
 
@@ -141,7 +138,7 @@
     <section class="lower">
       <div class="card">
         <h3>Опції очищення</h3>
-        <div class="options" id="options">
+        <div class="options">
           <label><input type="checkbox" id="opt-remove-attrs"> Видалити всі атрибути тегів</label>
           <label><input type="checkbox" id="opt-remove-inline"> Видалити inline-стилі</label>
           <label><input type="checkbox" id="opt-remove-class-id"> Видалити класи та ID</label>
@@ -171,14 +168,15 @@
   </main>
 
   <script>
-    /* ================== ТЕМА (нічна/денна) ================== */
+    /* ===== Тема (нічна/денна) ===== */
     (function initTheme(){
       const saved = localStorage.getItem('html-cleaner-theme');
       if (saved === 'light') document.body.classList.add('theme-light');
       updateThemeLabel();
       document.getElementById('themeToggle').addEventListener('click', () => {
         document.body.classList.toggle('theme-light');
-        localStorage.setItem('html-cleaner-theme', document.body.classList.contains('theme-light') ? 'light' : 'dark');
+        localStorage.setItem('html-cleaner-theme',
+          document.body.classList.contains('theme-light') ? 'light' : 'dark');
         updateThemeLabel();
       });
       function updateThemeLabel(){
@@ -187,12 +185,10 @@
       }
     })();
 
-    /* ================== ЕЛЕМЕНТИ ================== */
+    /* ===== Посилання на елементи ===== */
     const editor   = document.getElementById('editor');
-    const codeRaw  = document.getElementById('codeRaw');   // невидиме «джерело»
-    const codePre  = document.getElementById('codePre');
-    const codeView = document.getElementById('codeView');
-    const undoBtn  = document.getElementById('btnUndo');
+    const codeRaw  = document.getElementById('codeRaw');   // невидиме джерело для копіювання/заміни
+    const codeView = document.getElementById('codeView');  // видиме (підсвічене)
     const blockFormat = document.getElementById('blockFormat');
     const mkLink   = document.getElementById('mkLink');
     const rmLink   = document.getElementById('rmLink');
@@ -201,13 +197,13 @@
     const fontPlus = document.getElementById('fontPlus');
     const fontMinus= document.getElementById('fontMinus');
     const btnCopy  = document.getElementById('btnCopy');
+    const undoBtn  = document.getElementById('btnUndo');
 
-    /* ================== ТУЛБАР ================== */
+    /* ===== Тулбар ===== */
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.execCommand(btn.dataset.cmd,false);
-        normalizeEditorSemantic();
-        syncToCode();
+        normalizeEditorSemantic(); syncToCode();
       });
     });
     blockFormat.addEventListener('change', ()=>{
@@ -231,30 +227,22 @@
       normalizeEditorSemantic(); syncToCode();
     });
 
-    /* ================== ЖИВЕ ВІДОБРАЖЕННЯ ================== */
+    /* ===== Живе віддзеркалення + підсвічування ===== */
     const undoStack = [];
     function pushUndo(){ undoStack.push(codeRaw.value); undoBtn.disabled=false; }
     undoBtn.addEventListener('click', ()=>{ if(!undoStack.length) return; codeRaw.value=undoStack.pop(); renderHighlighted(); if(!undoStack.length) undoBtn.disabled=true; });
 
-    function syncToCode(){
-      codeRaw.value = prettyHtml(editor.innerHTML);
-      renderHighlighted();
-    }
+    function syncToCode(){ codeRaw.value = prettyHtml(editor.innerHTML); renderHighlighted(); }
+    function renderHighlighted(){ codeView.innerHTML = highlightHtml(codeRaw.value); }
 
-    // Підсвітка HTML у правому вікні
-    function renderHighlighted(){
-      const html = codeRaw.value;
-      codeView.innerHTML = highlightHtml(html);
-    }
-
-    // Нормалізація семантики у редакторі: b→strong, i→em
+    // Нормалізація семантики: b→strong, i→em
     function normalizeEditorSemantic(root = editor){
       root.querySelectorAll('b').forEach(el=>replaceTag(el,'strong'));
       root.querySelectorAll('i').forEach(el=>replaceTag(el,'em'));
       root.querySelectorAll('font').forEach(el=>replaceTag(el,'span'));
     }
 
-    // «Розумна» вставка — без сміття і з семантикою
+    // «Розумна» вставка — чистимо сміття і перетворюємо стиль у семантику
     editor.addEventListener('paste',(e)=>{
       e.preventDefault();
       const html = (e.clipboardData||window.clipboardData).getData('text/html');
@@ -265,25 +253,25 @@
       document.execCommand('insertHTML', false, clean);
       normalizeEditorSemantic(); syncToCode();
     });
-
     editor.addEventListener('input', ()=>{ normalizeEditorSemantic(); syncToCode(); });
 
-    /* ================== ШРИФТ У КОДІ ================== */
+    /* ===== Розмір шрифту коду ===== */
     function updateCodeFont(delta){
-      const style = getComputedStyle(codePre).fontSize;
+      const pre = document.getElementById('codePre');
+      const style = getComputedStyle(pre).fontSize;
       const px = parseInt(style || '14', 10) + delta;
-      codePre.style.fontSize = Math.max(10, Math.min(28, px)) + 'px';
+      pre.style.fontSize = Math.max(10, Math.min(28, px)) + 'px';
     }
     fontPlus.addEventListener('click', ()=>updateCodeFont(+1));
     fontMinus.addEventListener('click', ()=>updateCodeFont(-1));
 
-    /* ================== КОПІЮВАННЯ ================== */
+    /* ===== Копіювання ===== */
     btnCopy.addEventListener('click', async()=>{
       try{ await navigator.clipboard.writeText(codeRaw.value); btnCopy.textContent='Скопійовано!'; setTimeout(()=>btnCopy.textContent='Копіювати',1200); }
       catch(e){ codeRaw.select(); document.execCommand('copy'); }
     });
 
-    /* ================== Пошук/Заміна ================== */
+    /* ===== Пошук/заміна (чутливо до регістру) ===== */
     const findBox = document.getElementById('findBox');
     document.getElementById('btnAddRow').addEventListener('click', ()=>addFindRow());
     addFindRow();
@@ -297,35 +285,28 @@
       findBox.appendChild(row);
     }
 
-    /* ================== УТИЛІТИ DOM ================== */
+    /* ===== Утиліти DOM ===== */
     function unwrap(el){ const p=el.parentNode; if(!p) return; while(el.firstChild) p.insertBefore(el.firstChild, el); p.removeChild(el); }
     function replaceTag(el,tag){ const neo=document.createElement(tag); while(el.firstChild) neo.appendChild(el.firstChild); el.replaceWith(neo); return neo; }
     function queryAll(root,sel){ return Array.from(root.querySelectorAll(sel)); }
 
-    /* ================== САНІТИЗАЦІЯ ПРИ ВСТАВЦІ ================== */
+    /* ===== Санітизація при вставці ===== */
     function sanitizePastedHTML(raw){
       const parser=new DOMParser();
       const doc=parser.parseFromString(`<div id="__root">${raw}</div>`,'text/html');
       const root=doc.getElementById('__root');
 
-      // прибираємо службові теги
       root.querySelectorAll('script,style').forEach(n=>n.remove());
-
-      // семантика по стилю і застарілим тегам
       root.querySelectorAll('b').forEach(n=>replaceTag(n,'strong'));
       root.querySelectorAll('i').forEach(n=>replaceTag(n,'em'));
 
-      // чистимо атрибути
       queryAll(root,'*').forEach(el=>{
-        // вытащим признак жирного/курсива из style
         let bold=false, italic=false;
         if (el.hasAttribute('style')) {
           const st=el.getAttribute('style');
           if (/(font-weight\s*:\s*(bold|[6-9]00))/i.test(st)) bold=true;
           if (/(font-style\s*:\s*italic)/i.test(st)) italic=true;
         }
-
-        // удаляем всё лишнее
         [...el.attributes].forEach(a=>{
           const name=a.name.toLowerCase();
           if (name==='style' || name==='class' || name==='id' || name==='dir' || name==='lang' || name==='width' || name==='height'
@@ -333,12 +314,9 @@
             el.removeAttribute(a.name);
           }
         });
-
-        // применяем семантику вместо стилей
         if (bold && italic) {
-          // em внутри strong
-          const em = document.createElement('em'); while(el.firstChild) em.appendChild(el.firstChild);
-          const strong = document.createElement('strong'); strong.appendChild(em); el.replaceWith(strong);
+          const em=document.createElement('em'); while(el.firstChild) em.appendChild(el.firstChild);
+          const strong=document.createElement('strong'); strong.appendChild(em); el.replaceWith(strong);
         } else if (bold) {
           replaceTag(el,'strong');
         } else if (italic) {
@@ -349,48 +327,34 @@
       return root.innerHTML;
     }
 
-    /* ================== ПІДСВІЧУВАННЯ HTML ================== */
+    /* ===== Підсвічування HTML ===== */
     function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function highlightHtml(src){
-      // дуже простий токенайзер: теги / текст
-      let out = '';
-      let i = 0;
-      while (i < src.length){
-        const lt = src.indexOf('<', i);
-        if (lt < 0){ out += esc(src.slice(i)); break; }
-        // текст до тега
-        if (lt > i) out += esc(src.slice(i, lt));
-        const gt = src.indexOf('>', lt+1);
-        if (gt < 0){ out += esc(src.slice(lt)); break; }
-        const tag = src.slice(lt, gt+1);
-        out += highlightTag(tag);
-        i = gt+1;
+      let out=''; let i=0;
+      while(i<src.length){
+        const lt=src.indexOf('<',i);
+        if(lt<0){ out+=esc(src.slice(i)); break; }
+        if(lt>i) out+=esc(src.slice(i,lt));
+        const gt=src.indexOf('>',lt+1); if(gt<0){ out+=esc(src.slice(lt)); break; }
+        const tag=src.slice(lt,gt+1); out+=highlightTag(tag); i=gt+1;
       }
       return out;
     }
     function highlightTag(tag){
-      // коментарі
-      if (/^<!--/.test(tag)) return `<span class="tok.punc">&lt;!--</span>${esc(tag.slice(4,-3))}<span class="tok.punc">--&gt;</span>`;
-      // розбір відкривного/закривного тега
-      const m = /^<\s*(\/)?\s*([a-zA-Z][\w:-]*)([^>]*)>$/s.exec(tag);
-      if (!m) return esc(tag);
-      const [,close,name,rest] = m;
-      let html = `<span class="tok punc">&lt;${close?'/':''}</span><span class="tok tag">${name}</span>`;
-      // атрибути
-      const attrRe = /([a-zA-Z_:][\w:.-]*)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>=]+))?/g;
-      let a; while ((a = attrRe.exec(rest))){
-        const an=a[1]; const eq=a[2]||'';
-        html += ` <span class="tok attr">${an}</span>`;
-        if (eq){
-          const v = eq.replace(/^\s*=\s*/, '');
-          html += `<span class="tok punc">=</span><span class="tok str">${esc(v)}</span>`;
-        }
+      const m=/^<\s*(\/)?\s*([a-zA-Z][\w:-]*)([^>]*)>$/s.exec(tag);
+      if(!m) return esc(tag);
+      const [,close,name,rest]=m;
+      let html=`<span class="tok punc">&lt;${close?'/':''}</span><span class="tok tag">${name}</span>`;
+      const attrRe=/([a-zA-Z_:][\w:.-]*)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>=]+))?/g; let a;
+      while((a=attrRe.exec(rest))){
+        const an=a[1], eq=a[2]||'';
+        html+=` <span class="tok attr">${an}</span>`;
+        if(eq){ const v=eq.replace(/^\s*=\s*/,''); html+=`<span class="tok punc">=</span><span class="tok str">${esc(v)}</span>`; }
       }
-      html += `<span class="tok punc">&gt;</span>`;
-      return html;
+      html+=`<span class="tok punc">&gt;</span>`; return html;
     }
 
-    /* ================== ФОРМАТЕР HTML ================== */
+    /* ===== Форматер HTML (відступи + нові рядки) ===== */
     function prettyHtml(html){
       try{
         html=String(html);
@@ -418,22 +382,26 @@
             const txt=t.trim(); if(txt) out.push('  '.repeat(indent)+txt);
           }
         }
-        return out.join('\n').trim();
+        return out.join('\\n').trim();
       }catch(e){ return String(html); }
     }
 
-    /* ================== НОРМАЛІЗАЦІЯ <p> ПІСЛЯ ОЧИЩЕННЯ ================== */
+    /* ===== Нормалізація <p> після очищення ===== */
     function normalizeP(root){
       queryAll(root,'p p').forEach(inner=>unwrap(inner));
       const isBlank=el=>(!el.textContent||el.textContent.replace(/\u00A0|\s/g,'')==='')&&!el.firstElementChild;
       let changed;
-      do{ changed=false;
+      do{
+        changed=false;
         const ps=queryAll(root,'p');
-        for(let i=0;i<ps.length-1;i++){ const a=ps[i], b=ps[i+1]; if(isBlank(a)&&isBlank(b)){ b.remove(); changed=true; break; } }
+        for(let i=0;i<ps.length-1;i++){
+          const a=ps[i], b=ps[i+1];
+          if(isBlank(a)&&isBlank(b)){ b.remove(); changed=true; break; }
+        }
       }while(changed);
     }
 
-    /* ================== ОЧИЩЕННЯ (кнопка) ================== */
+    /* ===== Очищення (кнопка) ===== */
     document.getElementById('btnClean').addEventListener('click', ()=>{
       pushUndo();
       let html = codeRaw.value || editor.innerHTML || '';
@@ -460,12 +428,10 @@
         emToH3:document.getElementById('opt-em-to-h3').checked,
       };
 
-      // 1) структурні перетворення
+      // Структурні перетворення
       if (opts.removeImages) queryAll(root,'img').forEach(el=>el.remove());
       if (opts.removeLinks)  queryAll(root,'a').forEach(el=>unwrap(el));
-
-      if (opts.spanDivToP){ queryAll(root,'span, div').forEach(el=>replaceTag(el,'p')); normalizeP(root); }
-
+      if (opts.spanDivToP) { queryAll(root,'span, div').forEach(el=>replaceTag(el,'p')); normalizeP(root); }
       if (opts.removePInTables) queryAll(root,'table p, thead p, tbody p, tr p, td p, th p').forEach(p=>unwrap(p));
       if (opts.strongToH2) queryAll(root,'strong').forEach(el=>replaceTag(el,'h2'));
       if (opts.emToH3)     queryAll(root,'em, i').forEach(el=>replaceTag(el,'h3'));
@@ -479,12 +445,12 @@
 
       normalizeP(root);
 
-      // 2) серіалізація + текстові заміни
+      // Серіалізація + текстові заміни
       html = root.innerHTML;
       if (opts.nbspToSpace)    html = html.replace(/&nbsp;|\u00A0/g,' ');
       if (opts.removeSuccNbsp) html = html.replace(/(?:&nbsp;|\u00A0){2,}/g,' ');
 
-      // 3) пошук/заміна
+      // Пошук/заміна (літерально)
       const rows=Array.from(document.querySelectorAll('.find-row'));
       for(const row of rows){
         const [findInput,replInput]=row.querySelectorAll('input');
@@ -498,7 +464,7 @@
       renderHighlighted();
     });
 
-    // Початковий хінт
+    // Хінт за замовчуванням
     editor.innerHTML = '<p><strong>Ласкаво просимо!</strong> Вставте текст ліворуч. Праворуч з’явиться HTML-код. Оберіть опції очищення і натисніть <em>Очистити</em>.</p>';
     normalizeEditorSemantic();
     syncToCode();
