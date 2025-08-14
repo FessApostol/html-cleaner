@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML (MVP) — версія 7</title>
+  <title>Очищувач HTML (MVP) — версія 8</title>
   <style>
     /* ===== ТЕМИ ===== */
     :root{
       --gap:14px; --code-font-size:14px;
-      /* нічна (не змінював) */
+      /* нічна */
       --bg:#0b1020; --text:#e7ecf7; --muted:#8da0d0;
       --card:#0f1630; --card-2:#0e1431; --border:#1b2445; --border-2:#26325f;
       --mono:#0a112b; --btn:#2952ff; --btn2:#4669ff;
       --tok-tag:#5ab0ff; --tok-attr:#c792ea; --tok-str:#a3e635; --tok-punc:#9aa7c7; --tok-text:#e7ecf7;
     }
-    /* денна — ближе до html-cleaner */
     body.theme-light{
+      /* денна (світла як у html-cleaner) */
       --bg:#ffffff; --text:#0b1220; --muted:#6b7280;
       --card:#ffffff; --card-2:#f5f7fb; --border:#dfe3ef; --border-2:#cfd6ea;
       --mono:#f8fafc; --btn:#2b72ff; --btn2:#5b8dff;
@@ -47,15 +47,13 @@
     #editor{ padding:12px; height:520px; outline:none; line-height:1.5; overflow:auto; resize:vertical; }
     #editor:empty:before{ content:'Вставте або напишіть текст тут…'; color:var(--muted); }
 
-    /* Правий код з підсвіткою */
+    /* Праве вікно коду (з підсвіткою) */
     .code-wrap{ display:flex; flex-direction:column; }
     #codeRaw{ position:absolute; left:-99999px; }
     #codePre{ margin:0; background:var(--mono); color:var(--tok-text); padding:12px; height:520px; overflow:auto; resize:vertical;
-              font: 400 var(--code-font-size)/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; white-space:pre; }
-    .tok.tag{ color:var(--tok-tag); }
-    .tok.attr{ color:var(--tok-attr); }
-    .tok.str{ color:var(--tok-str); }
-    .tok.punc{ color:var(--tok-punc); }
+              font:400 var(--code-font-size)/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; white-space:pre; }
+    .tok.tag{ color:var(--tok-tag); } .tok.attr{ color:var(--tok-attr); }
+    .tok.str{ color:var(--tok-str); } .tok.punc{ color:var(--tok-punc); }
 
     .foot-btns{ display:flex; gap:8px; padding:10px; border-top:1px solid var(--border); background:var(--card-2); }
     .btn{ background:var(--btn); border:1px solid var(--btn2); color:#fff; padding:9px 12px; border-radius:10px; font-size:14px; cursor:pointer; }
@@ -81,12 +79,12 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 7</h1>
+    <h1>Очищувач HTML (MVP) — версія 8</h1>
     <button id="themeToggle" type="button">🌙 Нічна тема</button>
   </header>
 
   <main class="wrap">
-    <!-- ЛІВА ПАНЕЛЬ -->
+    <!-- Ліва панель -->
     <section class="panel" aria-label="Текст">
       <h2>Текст</h2>
       <div class="toolbar" aria-label="Засоби форматування">
@@ -117,13 +115,11 @@
       <div id="editor" contenteditable="true"></div>
     </section>
 
-    <!-- ПРАВА ПАНЕЛЬ -->
+    <!-- Права панель -->
     <section class="panel" aria-label="HTML-код">
       <h2>HTML-код</h2>
       <div class="code-wrap">
-        <!-- невидиме «джерело» для копіювання -->
         <textarea id="codeRaw" spellcheck="false"></textarea>
-        <!-- видимий блок з підсвіткою -->
         <pre id="codePre"><code id="codeView"></code></pre>
       </div>
       <div class="foot-btns">
@@ -135,7 +131,7 @@
       </div>
     </section>
 
-    <!-- НИЖНІ БЛОКИ -->
+    <!-- Нижні блоки -->
     <section class="lower">
       <div class="card">
         <h3>Опції очищення</h3>
@@ -169,7 +165,7 @@
   </main>
 
   <script>
-    /* ===== ТЕМА ===== */
+    /* ===== Тема ===== */
     (function initTheme(){
       const saved = localStorage.getItem('html-cleaner-theme');
       if (saved === 'light') document.body.classList.add('theme-light');
@@ -186,7 +182,7 @@
       }
     })();
 
-    /* ===== ЕЛЕМЕНТИ ===== */
+    /* ===== Елементи ===== */
     const editor   = document.getElementById('editor');
     const codeRaw  = document.getElementById('codeRaw');
     const codeView = document.getElementById('codeView');
@@ -200,7 +196,7 @@
     const btnCopy  = document.getElementById('btnCopy');
     const undoBtn  = document.getElementById('btnUndo');
 
-    /* ===== ТУЛБАР ===== */
+    /* ===== Тулбар ===== */
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.execCommand(btn.dataset.cmd,false);
@@ -228,7 +224,7 @@
       normalizeEditorSemantic(); syncToCode();
     });
 
-    /* ===== ЖИВИЙ КОД + ПІДСВІТКА ===== */
+    /* ===== Живий код + підсвічування ===== */
     const undoStack=[];
     function pushUndo(){ undoStack.push(codeRaw.value); undoBtn.disabled=false; }
     undoBtn.addEventListener('click', ()=>{ if(!undoStack.length) return; codeRaw.value=undoStack.pop(); renderHighlighted(); if(!undoStack.length) undoBtn.disabled=true; });
@@ -243,7 +239,7 @@
       root.querySelectorAll('font').forEach(el=>replaceTag(el,'span'));
     }
 
-    // «Розумна» вставка: чищу зайві атрибути + витягую жир/курсив у семантику
+    // «Розумна» вставка
     editor.addEventListener('paste',(e)=>{
       e.preventDefault();
       const html = (e.clipboardData||window.clipboardData).getData('text/html');
@@ -256,7 +252,7 @@
     });
     editor.addEventListener('input', ()=>{ normalizeEditorSemantic(); syncToCode(); });
 
-    /* ===== ЗМІНА РОЗМІРУ ШРИФТУ КОДУ ===== */
+    /* ===== Розмір шрифту коду ===== */
     function updateCodeFont(delta){
       const pre = document.getElementById('codePre');
       const px = parseInt(getComputedStyle(pre).fontSize || '14', 10) + delta;
@@ -265,7 +261,7 @@
     fontPlus.addEventListener('click', ()=>updateCodeFont(+1));
     fontMinus.addEventListener('click', ()=>updateCodeFont(-1));
 
-    /* ===== КОПІЮВАННЯ ===== */
+    /* ===== Копіювання ===== */
     btnCopy.addEventListener('click', async()=>{
       try{ await navigator.clipboard.writeText(codeRaw.value); btnCopy.textContent='Скопійовано!'; setTimeout(()=>btnCopy.textContent='Копіювати',1200); }
       catch(e){ codeRaw.select(); document.execCommand('copy'); }
@@ -285,12 +281,12 @@
       findBox.appendChild(row);
     }
 
-    /* ===== УТИЛІТИ DOM ===== */
+    /* ===== Утиліти DOM ===== */
     function unwrap(el){ const p=el.parentNode; if(!p) return; while(el.firstChild) p.insertBefore(el.firstChild, el); p.removeChild(el); }
     function replaceTag(el,tag){ const neo=document.createElement(tag); while(el.firstChild) neo.appendChild(el.firstChild); el.replaceWith(neo); return neo; }
     function queryAll(root,sel){ return Array.from(root.querySelectorAll(sel)); }
 
-    /* ===== САНІТИЗАЦІЯ ПРИ ВСТАВЦІ ===== */
+    /* ===== Санітизація при вставці ===== */
     function sanitizePastedHTML(raw){
       const parser=new DOMParser();
       const doc=parser.parseFromString(`<div id="__root">${raw}</div>`,'text/html');
@@ -319,47 +315,51 @@
       return root.innerHTML;
     }
 
-    /* ===== ПІДСВІЧУВАННЯ HTML ===== */
-    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    /* ===== Підсвічування HTML ===== */
+    function escText(s){
+      // кодуємо спецсимволи і NBSP → &nbsp; (щоби не втрачати їх)
+      return String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/\u00A0/g,'&nbsp;');
+    }
     function highlightHtml(src){
       let out=''; let i=0;
       while(i<src.length){
         const lt=src.indexOf('<',i);
-        if(lt<0){ out+=esc(src.slice(i)); break; }
-        if(lt>i) out+=esc(src.slice(i,lt));
-        const gt=src.indexOf('>',lt+1); if(gt<0){ out+=esc(src.slice(lt)); break; }
+        if(lt<0){ out+=escText(src.slice(i)); break; }
+        if(lt>i) out+=escText(src.slice(i,lt));
+        const gt=src.indexOf('>',lt+1); if(gt<0){ out+=escText(src.slice(lt)); break; }
         const tag=src.slice(lt,gt+1); out+=highlightTag(tag); i=gt+1;
       }
       return out;
     }
     function highlightTag(tag){
       const m=/^<\s*(\/)?\s*([a-zA-Z][\w:-]*)([^>]*)>$/s.exec(tag);
-      if(!m) return esc(tag);
+      if(!m) return escText(tag);
       const [,close,name,rest]=m;
       let html=`<span class="tok punc">&lt;${close?'/':''}</span><span class="tok tag">${name}</span>`;
       const attrRe=/([a-zA-Z_:][\w:.-]*)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>=]+))?/g; let a;
-      while((a=attrRe.exec(rest))){ const an=a[1], eq=a[2]||''; html+=` <span class="tok attr">${an}</span>`; if(eq){ const v=eq.replace(/^\s*=\s*/,''); html+=`<span class="tok punc">=</span><span class="tok str">${esc(v)}</span>`; } }
+      while((a=attrRe.exec(rest))){ const an=a[1], eq=a[2]||''; html+=` <span class="tok attr">${an}</span>`; if(eq){ const v=eq.replace(/^\s*=\s*/,''); html+=`<span class="tok punc">=</span><span class="tok str">${escText(v)}</span>`; } }
       html+=`<span class="tok punc">&gt;</span>`; return html;
     }
 
-    /* ===== ФОРМАТЕР: «як у html-cleaner» =====
-       Ідея: парсимо DOM і друкуємо:
-       — якщо елемент блочний і ВСЕ ВНУТРІШНЄ — лише інлайни/текст → в один рядок: <h2>…</h2>
-       — якщо всередині є блочні вузли → відступи і переноси. */
+    /* ===== Форматер «в рядок для інлайнів, перенос для блоків», збереження NBSP ===== */
     function prettyFormat(html){
-      // прибираємо «сирі» \r\n, які могли прийти з буфера
-      html = (html || '').replace(/\r?\n/g, '');
+      // прибираємо лише \r\n, \t — НЕ чіпаємо звичайні пробіли та NBSP
+      html = (html || '').replace(/[\r\n\t]/g, '');
 
       const parser = new DOMParser();
       const doc = parser.parseFromString(`<div id="__root">${html}</div>`, 'text/html');
       const root = doc.getElementById('__root');
 
-      const voidSet = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+      const voidSet  = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
       const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption','hr']);
-      const inlineSet = new Set(['a','span','strong','em','b','i','u','s','sub','sup','small','abbr','code','kbd','mark','q','cite','time','var','label','br','img']);
+      const inlineSet= new Set(['a','span','strong','em','b','i','u','s','sub','sup','small','abbr','code','kbd','mark','q','cite','time','var','label','br','img']);
 
       const attrEsc = (s)=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const textEsc = (s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const textKeep = (s)=>escText(String(s).replace(/[\r\n\t]/g,'')); // NBSP зберігається, звичайні пробіли — як є
 
       function openTag(el){
         let s = `<${el.nodeName.toLowerCase()}`;
@@ -370,8 +370,8 @@
 
       function onlyInlineInside(el){
         for (let n=el.firstChild; n; n=n.nextSibling){
-          if (n.nodeType===1){ // ELEMENT_NODE
-            const name = n.nodeName.toLowerCase();
+          if (n.nodeType===1){
+            const name=n.nodeName.toLowerCase();
             if (blockSet.has(name) && !inlineSet.has(name)) return false;
             if (!onlyInlineInside(n)) return false;
           }
@@ -381,26 +381,23 @@
 
       function printNode(n, indent, out){
         if (n.nodeType===3){ // TEXT
-          const t = n.nodeValue.replace(/\s+/g,' ').trim(); // «склеюємо» пробіли + прибираємо \n
-          if (t) out.push('  '.repeat(indent) + textEsc(t));
+          const t = textKeep(n.nodeValue);
+          if (t) out.push('  '.repeat(indent) + t);
           return;
         }
         if (n.nodeType!==1) return;
 
-        const name = n.nodeName.toLowerCase();
+        const name=n.nodeName.toLowerCase();
         if (voidSet.has(name)){ out.push('  '.repeat(indent) + openTag(n).replace('>',' />')); return; }
 
         const line = openTag(n);
         const inlineOnly = onlyInlineInside(n);
 
         if (inlineOnly){
-          // в один рядок: <tag> [діти як строка] </tag>
-          let inner = '';
+          let inner='';
           for (let c=n.firstChild; c; c=c.nextSibling){
-            if (c.nodeType===3){ inner += textEsc(c.nodeValue.replace(/\s+/g,' ').trim()); }
-            else if (c.nodeType===1){
-              const tmp=[]; printNodeInline(c, tmp); inner += tmp.join('');
-            }
+            if (c.nodeType===3) inner += textKeep(c.nodeValue);
+            else if (c.nodeType===1){ const tmp=[]; printNodeInline(c,tmp); inner+=tmp.join(''); }
           }
           out.push('  '.repeat(indent) + line + inner + closeTag(n));
         } else {
@@ -409,26 +406,23 @@
           out.push('  '.repeat(indent) + closeTag(n));
         }
       }
-
-      // інлайн-друк елементів (без переносів/відступів усередині)
       function printNodeInline(el, out){
-        const name = el.nodeName.toLowerCase();
+        const name=el.nodeName.toLowerCase();
         if (voidSet.has(name)){ out.push(openTag(el).replace('>',' />')); return; }
-        let s = openTag(el);
-        let inner = '';
+        let s=openTag(el), inner='';
         for (let c=el.firstChild; c; c=c.nextSibling){
-          if (c.nodeType===3) inner += textEsc(c.nodeValue.replace(/\s+/g,' ').trim());
-          else if (c.nodeType===1){ const t=[]; printNodeInline(c,t); inner += t.join(''); }
+          if (c.nodeType===3) inner += textKeep(c.nodeValue);
+          else if (c.nodeType===1){ const t=[]; printNodeInline(c,t); inner+=t.join(''); }
         }
-        out.push(s + inner + closeTag(el));
+        out.push(s+inner+closeTag(el));
       }
 
       const out=[];
-      for (let n=root.firstChild; n; n=n.nextSibling){ printNode(n, 0, out); }
+      for (let n=root.firstChild; n; n=n.nextSibling){ printNode(n,0,out); }
       return out.join('\n').trim();
     }
 
-    /* ===== ОЧИЩЕННЯ ===== */
+    /* ===== Очищення ===== */
     document.getElementById('btnClean').addEventListener('click', ()=>{
       pushUndo();
       let html = codeRaw.value || editor.innerHTML || '';
@@ -468,7 +462,27 @@
       if (opts.removeClassId){ queryAll(root,'[class]').forEach(el=>el.removeAttribute('class')); queryAll(root,'[id]').forEach(el=>el.removeAttribute('id')); }
       if (opts.removeAttrs){   queryAll(root,'*').forEach(el=>{ [...el.attributes].forEach(a=>el.removeAttribute(a.name)); }); }
 
-      // нормалізуємо <p>: без вкладених і без подвійних порожніх
+      // Рекурсивно прибираємо порожні елементи (включно з «<p><strong><em></em></strong></p>»)
+      if (opts.removeEmpty || opts.removeOneNbsp){
+        const isMeaningless = (el) => {
+          // NBSP вважаємо «порожнечею» у цій перевірці
+          const text = (el.textContent || '').replace(/\u00A0|\s/g,'');
+          // не видаляємо, якщо є «візуальні» елементи
+          if (el.querySelector && el.querySelector('img,br,hr,video,audio,iframe,svg,source')) return false;
+          return text==='';
+        };
+        const onlyNbspInnerHTML = (el) => /^(\s|\u00A0|&nbsp;)*$/.test(el.innerHTML || '');
+        let changed;
+        do{
+          changed=false;
+          queryAll(root,'*').forEach(el=>{
+            if (opts.removeEmpty && isMeaningless(el)){ el.remove(); changed=true; return; }
+            if (opts.removeOneNbsp && !el.firstElementChild && onlyNbspInnerHTML(el)){ el.remove(); changed=true; }
+          });
+        }while(changed);
+      }
+
+      // Нормалізація <p>
       (function normalizeP(){
         queryAll(root,'p p').forEach(inner=>unwrap(inner));
         const isBlank=el=>(!el.textContent||el.textContent.replace(/\u00A0|\s/g,'')==='')&&!el.firstElementChild;
@@ -483,7 +497,7 @@
       if (opts.nbspToSpace)    html = html.replace(/&nbsp;|\u00A0/g,' ');
       if (opts.removeSuccNbsp) html = html.replace(/(?:&nbsp;|\u00A0){2,}/g,' ');
 
-      // Пошук/заміна
+      // Пошук/заміна (літерально)
       const rows=Array.from(document.querySelectorAll('.find-row'));
       for(const row of rows){
         const [findInput,replInput]=row.querySelectorAll('input');
@@ -497,7 +511,7 @@
       renderHighlighted();
     });
 
-    /* ===== ПОЧАТКОВЕ ПОВЕДІННЯ ===== */
+    /* ===== Стартове повідомлення ===== */
     editor.innerHTML = '<p><strong>Ласкаво просимо!</strong> Вставте текст ліворуч. Праворуч з’явиться HTML-код. Оберіть опції очищення і натисніть <em>Очистити</em>.</p>';
     normalizeEditorSemantic(); syncToCode();
   </script>
