@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML (MVP) — версія 3</title>
+  <title>Очищувач HTML (MVP) — версія 4</title>
   <style>
     :root { --gap: 14px; --code-font-size: 14px; }
     * { box-sizing: border-box; }
@@ -23,6 +23,7 @@
     .toolbar button:hover, .toolbar select:hover { background: #1a2958; }
     .toolbar button:active { transform: translateY(1px); }
 
+    /* Редактор і код: стандартна висота + ручне масштабування */
     #editor { padding: 12px; height: 520px; outline: none; line-height: 1.5; overflow: auto; resize: vertical; }
     #editor:empty:before{ content: 'Вставте або напишіть текст тут…'; color:#8da0d0; }
 
@@ -35,7 +36,6 @@
 
     /* Блоки Опцій + Пошук/Заміна */
     .lower { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
-
     .card { background: #0f1630; border: 1px solid #1b2445; border-radius: 10px; padding: 10px 12px 6px; }
     .card h3 { margin: 4px 0 10px; font-size: 14px; font-weight: 600; }
     .card .sub { display:block; margin-top:-6px; margin-bottom:8px; opacity:.8; font-size:12px; }
@@ -53,7 +53,7 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 3</h1>
+    <h1>Очищувач HTML (MVP) — версія 4</h1>
   </header>
 
   <main class="wrap">
@@ -161,7 +161,7 @@
     const fontMinus = document.getElementById('fontMinus');
     const btnCopy = document.getElementById('btnCopy');
 
-// --- ТУЛБАР: базові та популярні команди форматування ---
+    // --- ТУЛБАР: базові та популярні команди форматування ---
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.execCommand(btn.dataset.cmd, false);
@@ -202,7 +202,6 @@
 
     // --- ЖИВЕ ДЗЕРКАЛО HTML ---
     const undoStack = [];
-
     function syncToCode(){ codeArea.value = prettyHtml(editor.innerHTML); }
     editor.addEventListener('input', syncToCode);
     editor.addEventListener('paste', () => setTimeout(syncToCode));
@@ -294,8 +293,7 @@
             if (text) out.push('  '.repeat(indent) + text);
           }
         }
-        return out.join('
-').trim();
+        return out.join('\n').trim(); /* ← правильний перенос рядка */
       } catch (e) { return String(html); }
     }
 
