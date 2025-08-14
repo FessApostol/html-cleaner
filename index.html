@@ -23,10 +23,10 @@
     .toolbar button:hover, .toolbar select:hover { background: #1a2958; }
     .toolbar button:active { transform: translateY(1px); }
 
-    #editor { padding: 12px; min-height: 300px; outline: none; line-height: 1.5; }
+    #editor { padding: 12px; height: 520px; outline: none; line-height: 1.5; overflow: auto; resize: vertical; }
     #editor:empty:before{ content: 'Вставте або напишіть текст тут…'; color:#8da0d0; }
 
-    #code { width: 100%; flex: 1 1 auto; padding: 12px; background: #0a112b; color: #d7e1ff; border: 0; resize: none; outline: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: var(--code-font-size); line-height: 1.5; }
+    #code { width: 100%; padding: 12px; height: 520px; background: #0a112b; color: #d7e1ff; border: 0; resize: vertical; outline: none; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: var(--code-font-size); line-height: 1.5; }
 
     .foot-btns { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #1b2445; background: #0e1431; }
     .btn { background: #2952ff; border: 1px solid #4669ff; color: #fff; padding: 9px 12px; border-radius: 10px; font-size: 14px; cursor: pointer; }
@@ -192,7 +192,7 @@
     const undoBtn = document.getElementById('btnUndo');
     const undoStack = [];
 
-    function syncToCode(){ codeArea.value = editor.innerHTML; }
+    function syncToCode(){ codeArea.value = prettyHtml(editor.innerHTML); }
     editor.addEventListener('input', syncToCode);
     editor.addEventListener('paste', () => setTimeout(syncToCode));
 
@@ -245,6 +245,49 @@
       return neo;
     }
     function queryAll(root, selector){ return Array.from(root.querySelectorAll(selector)); }
+
+    // --- Форматування HTML для виводу (відступи + нові рядки) ---
+    function prettyHtml(html){
+      try {
+        html = String(html);
+        // розбиваємо на токени «тег або текст» без регулярок
+        const tokens = [];
+        let i = 0;
+        while (i < html.length) {
+          const lt = html.indexOf('<', i);
+          if (lt < 0) { const tail = html.slice(i); if (tail.trim()) tokens.push(tail); break; }
+          const text = html.slice(i, lt);
+          if (text.trim()) tokens.push(text);
+          const gt = html.indexOf('>', lt + 1);
+          if (gt < 0) { tokens.push(html.slice(lt)); break; }
+          tokens.push(html.slice(lt, gt + 1));
+          i = gt + 1;
+        }
+        const voidSet = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+        const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption','hr']);
+        function isTag(t){ return t.charAt(0) === '<' && t.charAt(t.length-1) === '>'; }
+        function tagName(tag){ let j = tag[1] === '/' ? 2 : 1; let name=''; while (j < tag.length){ const ch = tag[j]; if (ch === ' ' || ch === '>' || ch === '/') break; name += ch; j++; } return name.toLowerCase(); }
+        function isCloseTag(tag){ return tag[1] === '/'; }
+        function isSelfClosing(tag){ return tag[tag.length-2] === '/'; }
+        let indent = 0; const out = [];
+        for (const t of tokens){
+          if (isTag(t)){
+            const name = tagName(t);
+            const close = isCloseTag(t);
+            const selfc = isSelfClosing(t) || voidSet.has(name);
+            const isBlock = blockSet.has(name);
+            if (close && isBlock) indent = Math.max(0, indent-1);
+            out.push('  '.repeat(indent) + t);
+            if (!close && isBlock && !selfc) indent++;
+          } else {
+            const text = t.trim();
+            if (text) out.push('  '.repeat(indent) + text);
+          }
+        }
+        return out.join('
+').trim();
+      } catch (e) { return String(html); }
+    }
 
     // --- ОСНОВНИЙ ПАЙПЛАЙН ОЧИЩЕННЯ ---
     document.getElementById('btnClean').addEventListener('click', () => {
@@ -334,7 +377,7 @@
         html = html.replace(new RegExp(esc, 'g'), repl);
       }
 
-      codeArea.value = html;
+      codeArea.value = prettyHtml(html);
     });
 
     // Початковий хінт, щоби одразу було видно логіку
