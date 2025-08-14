@@ -41,7 +41,7 @@
     .card .sub { display:block; margin-top:-6px; margin-bottom:8px; opacity:.8; font-size:12px; }
 
     .options { columns: 2; column-gap: 22px; }
-    .options label { display: block; break-inside: avoid; margin: 6px 0; font-size: 13px; cursor: pointer; }
+    .options label { display: block; break-inside: avoid; margin: 6px 0; font-size: 13px; cursor: pointer; white-space: normal; word-break: break-word; }
     .options input { margin-right: 6px; }
 
     .find-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin: 8px 0; }
@@ -124,7 +124,7 @@
           <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &nbsp;</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
           <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги з одним &nbsp;</label>
-          <label><input type="checkbox" id="opt-remove-span"> Видалити теги &lt;span&gt;</label>
+          <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;\/&lt;div&gt; на &lt;p&gt;<\/label>
           <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
           <label><input type="checkbox" id="opt-remove-links"> Видалити посилання (залишити текст)</label>
           <label><input type="checkbox" id="opt-remove-tables"> Розгорнути таблиці (залишити вміст)</label>
@@ -308,7 +308,7 @@
         removeSuccNbsp: document.getElementById('opt-remove-succ-nbsp').checked,
         removeEmpty: document.getElementById('opt-remove-empty').checked,
         removeOneNbsp: document.getElementById('opt-remove-one-nbsp').checked,
-        removeSpan: document.getElementById('opt-remove-span').checked,
+        spanDivToP: document.getElementById('opt-span-div-to-p').checked,
         removeImages: document.getElementById('opt-remove-images').checked,
         removeLinks: document.getElementById('opt-remove-links').checked,
         removeTables: document.getElementById('opt-remove-tables').checked,
@@ -322,7 +322,7 @@
       // 1) Структурні дії по DOM
       if (opts.removeImages) queryAll(root, 'img').forEach(el => el.remove());
       if (opts.removeLinks) queryAll(root, 'a').forEach(el => unwrap(el));
-      if (opts.removeSpan) queryAll(root, 'span').forEach(el => unwrap(el));
+      if (opts.spanDivToP) queryAll(root, 'span, div').forEach(el => replaceTag(el, 'p'));
       if (opts.removePInTables) queryAll(root, 'table p, thead p, tbody p, tr p, td p, th p').forEach(p => unwrap(p));
       if (opts.strongToH2) queryAll(root, 'strong').forEach(el => replaceTag(el, 'h2'));
       if (opts.emToH3) queryAll(root, 'em, i').forEach(el => replaceTag(el, 'h3'));
@@ -357,6 +357,23 @@
           });
         } while (changed);
       }
+
+      // Нормалізація абзаців <p>: розгортання вкладених і прибирання дубльованих порожніх
+      ;(function normalizeP(){
+        // розгортаємо вкладені <p> → лишаємо один рівень
+        queryAll(root, 'p p').forEach(inner => unwrap(inner));
+        // прибираємо послідовності порожніх <p><p>… до одного
+        const isBlank = (el) => (!el.textContent || el.textContent.replace(/\u00A0|\s/g,'')==='') && !el.firstElementChild;
+        let changed;
+        do {
+          changed = false;
+          const ps = queryAll(root, 'p');
+          for (let i=0; i<ps.length-1; i++){
+            const a = ps[i], b = ps[i+1];
+            if (isBlank(a) && isBlank(b)) { b.remove(); changed = true; break; }
+          }
+        } while (changed);
+      })();
 
       // 2) Серіалізація у рядок для текстових операцій
       html = root.innerHTML;
