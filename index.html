@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Очищувач HTML (MVP) — версія 10</title>
+  <title>Очищувач HTML (MVP) — версія 11</title>
   <style>
     /* ===== ТЕМИ ===== */
     :root{
@@ -15,7 +15,7 @@
       --tok-tag:#5ab0ff; --tok-attr:#c792ea; --tok-str:#a3e635; --tok-punc:#9aa7c7; --tok-text:#e7ecf7;
     }
     body.theme-light{
-      /* денна (світла як у html-cleaner) */
+      /* денна (максимально близько до html-cleaner) */
       --bg:#ffffff; --text:#0b1220; --muted:#6b7280;
       --card:#ffffff; --card-2:#f5f7fb; --border:#dfe3ef; --border-2:#cfd6ea;
       --mono:#f8fafc; --btn:#2b72ff; --btn2:#5b8dff;
@@ -44,13 +44,13 @@
     .toolbar button:active{ transform:translateY(1px); }
 
     /* Редактор */
-    #editor{ padding:12px; height:520px; outline:none; line-height:1.5; overflow:auto; resize:vertical; }
+    #editor{ padding:12px; height:520px; min-height:320px; outline:none; line-height:1.5; overflow:auto; resize:vertical; }
     #editor:empty:before{ content:'Вставте або напишіть текст тут…'; color:var(--muted); }
 
     /* Праве вікно коду (з підсвіткою) */
     .code-wrap{ display:flex; flex-direction:column; }
     #codeRaw{ position:absolute; left:-99999px; }
-    #codePre{ margin:0; background:var(--mono); color:var(--tok-text); padding:12px; height:520px; overflow:auto; resize:vertical;
+    #codePre{ margin:0; background:var(--mono); color:var(--tok-text); padding:12px; height:520px; min-height:320px; overflow:auto; resize:vertical;
               font:400 var(--code-font-size)/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; white-space:pre; }
     .tok.tag{ color:var(--tok-tag); } .tok.attr{ color:var(--tok-attr); }
     .tok.str{ color:var(--tok-str); } .tok.punc{ color:var(--tok-punc); }
@@ -79,7 +79,7 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 10</h1>
+    <h1>Очищувач HTML (MVP) — версія 11</h1>
     <button id="themeToggle" type="button">🌙 Нічна тема</button>
   </header>
 
@@ -136,10 +136,8 @@
       <div class="card">
         <h3>Опції очищення</h3>
         <div class="options">
-          <label><input type="checkbox" id="opt-unwrap-except-p"> Прибрати всі теги, крім &lt;p&gt;</label>
           <label><input type="checkbox" id="opt-remove-inline"> Видалити inline-стилі</label>
           <label><input type="checkbox" id="opt-remove-class-id"> Прибрати класи та ID</label>
-          <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &amp;nbsp;</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
           <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги, що містять лише &amp;nbsp;</label>
           <label><input type="checkbox" id="opt-remove-span"> Видалити тег &lt;span&gt;</label>
@@ -149,7 +147,11 @@
           <label><input type="checkbox" id="opt-table-to-empty-p"> Замінити теги таблиць на порожні &lt;p&gt;</label>
           <div class="hr"></div>
           <label><input type="checkbox" id="opt-remove-p-in-tables"> Видалити теги &lt;p&gt; у таблицях</label>
-          <label><input type="checkbox" id="opt-nbsp-to-space"> Замінити &amp;nbsp; на пробіл</label>
+          <label><input type="checkbox" id="opt-br-to-p"> Прибрати тег &lt;br&gt; (розбити на абзаци)</label>
+          <label><input type="checkbox" id="opt-norm-lists"> Нормалізувати списки (–, •, 1.)</label>
+          <label><input type="checkbox" id="opt-allowlist"> Білий список тегів<br><span class="sub">Залишити тільки: p, h1, h2, h3, ul, ol, li, a, strong, em</span></label>
+          <div class="hr"></div>
+          <label><input type="checkbox" id="opt-nbsp-to-space"> Замінити &amp;nbsp; на пробіл (та стиснути послідовності)</label>
           <label><input type="checkbox" id="opt-strong-to-h2"> Замінити &lt;strong&gt; на &lt;h2&gt;</label>
           <label><input type="checkbox" id="opt-em-to-h3"> Замінити &lt;em&gt;/&lt;i&gt; на &lt;h3&gt;</label>
         </div>
@@ -197,17 +199,17 @@
     const btnCopy  = document.getElementById('btnCopy');
     const undoBtn  = document.getElementById('btnUndo');
 
-    // Синхронізація висоти панелей (editor <-> codePre)
-const ro = new ResizeObserver(entries => {
-  for (const e of entries) {
-    const h = e.target.clientHeight + 'px';
-    if (e.target === editor)  codePre.style.height = h;
-    if (e.target === codePre) editor.style.height  = h;
-  }
-});
-ro.observe(editor);
-ro.observe(codePre);
-
+    /* ===== Синхронізація висоти панелей (захист від «обнулення») ===== */
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const h = Math.max(320, Math.round(e.target.getBoundingClientRect().height || 0));
+        if (h < 120) continue; // ігноруємо підозріло малі виміри
+        if (e.target === editor)  codePre.style.height = h + 'px';
+        if (e.target === codePre) editor.style.height  = h + 'px';
+      }
+    });
+    ro.observe(editor);
+    ro.observe(codePre);
 
     /* ===== Тулбар ===== */
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn=>{
@@ -238,8 +240,7 @@ ro.observe(codePre);
     });
 
     /* ===== Живий код + підсвічування ===== */
-    const undoStack=[];
-    function pushUndo(){ undoStack.push(codeRaw.value); undoBtn.disabled=false; }
+    const undoStack=[]; function pushUndo(){ undoStack.push(codeRaw.value); undoBtn.disabled=false; }
     undoBtn.addEventListener('click', ()=>{ if(!undoStack.length) return; codeRaw.value=undoStack.pop(); renderHighlighted(); if(!undoStack.length) undoBtn.disabled=true; });
 
     function syncToCode(){ codeRaw.value = prettyFormat(editor.innerHTML); renderHighlighted(); }
@@ -267,9 +268,8 @@ ro.observe(codePre);
 
     /* ===== Розмір шрифту коду ===== */
     function updateCodeFont(delta){
-      const pre = document.getElementById('codePre');
-      const px = parseInt(getComputedStyle(pre).fontSize || '14', 10) + delta;
-      pre.style.fontSize = Math.max(10, Math.min(28, px)) + 'px';
+      const px = (parseInt(getComputedStyle(codePre).fontSize,10)||14) + delta;
+      codePre.style.fontSize = Math.max(10, Math.min(28, px)) + 'px';
     }
     fontPlus.addEventListener('click', ()=>updateCodeFont(+1));
     fontMinus.addEventListener('click', ()=>updateCodeFont(-1));
@@ -305,40 +305,19 @@ ro.observe(codePre);
       const doc=parser.parseFromString(`<div id="__root">${raw}</div>`,'text/html');
       const root=doc.getElementById('__root');
       // Глобально: всі <div> → <p>
-queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
-
+      queryAll(root,'div').forEach(el=>replaceTag(el,'p'));
       root.querySelectorAll('script,style').forEach(n=>n.remove());
       root.querySelectorAll('b').forEach(n=>replaceTag(n,'strong'));
       root.querySelectorAll('i').forEach(n=>replaceTag(n,'em'));
-      queryAll(root,'*').forEach(el=>{
-        let bold=false, italic=false;
-        if (el.hasAttribute('style')){
-          const st=el.getAttribute('style');
-          if (/(font-weight\s*:\s*(bold|[6-9]00))/i.test(st)) bold=true;
-          if (/(font-style\s*:\s*italic)/i.test(st)) italic=true;
-        }
-        [...el.attributes].forEach(a=>{
-          const n=a.name.toLowerCase();
-          if (n==='style' || n==='class' || n==='id' || n==='dir' || n==='lang' || n==='width' || n==='height'
-              || n.startsWith('data-') || n.startsWith('aria-') || n==='role'){
-            el.removeAttribute(a.name);
-          }
-        });
-        if (bold && italic){ const em=document.createElement('em'); while(el.firstChild) em.appendChild(el.firstChild);
-          const strong=document.createElement('strong'); strong.appendChild(em); el.replaceWith(strong);
-        } else if (bold){ replaceTag(el,'strong'); } else if (italic){ replaceTag(el,'em'); }
-      });
+      // Прибираємо шумові атрибути
+      queryAll(root,'*').forEach(el=>{ ['style','class','id','dir','lang','width','height'].forEach(a=>el.removeAttribute(a)); });
       return root.innerHTML;
     }
 
     /* ===== Підсвічування HTML ===== */
     function escText(s){
       // кодуємо спецсимволи і NBSP → &nbsp; (щоби не втрачати їх)
-      return String(s)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/\u00A0/g,'&nbsp;');
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\u00A0/g,'&nbsp;');
     }
     function highlightHtml(src){
       let out=''; let i=0;
@@ -361,30 +340,24 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
       html+=`<span class="tok punc">&gt;</span>`; return html;
     }
 
-    /* ===== Форматер «в рядок для інлайнів, перенос для блоків», збереження NBSP ===== */
+    /* ===== Форматер (збереження NBSP) ===== */
     function prettyFormat(html){
-      // прибираємо лише \r\n, \t — НЕ чіпаємо звичайні пробіли та NBSP
-      html = (html || '').replace(/[\r\n\t]/g, '');
+      html = (html || '').replace(/[\r\n\t]/g,''); // прибираємо службові переноси
 
       const parser = new DOMParser();
       const doc = parser.parseFromString(`<div id="__root">${html}</div>`, 'text/html');
       const root = doc.getElementById('__root');
 
-      // Глобально: всі <div> міняємо на <p> (атрибути ігноруємо)
-queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
+      // Глобально: <div> → <p>
+      queryAll(root,'div').forEach(el=>replaceTag(el,'p'));
 
       const voidSet  = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
       const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption','hr']);
       const inlineSet= new Set(['a','span','strong','em','b','i','u','s','sub','sup','small','abbr','code','kbd','mark','q','cite','time','var','label','br','img']);
       const attrEsc = (s)=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const textKeep = (s)=>escText(String(s).replace(/[\r\n\t]/g,'')); // NBSP зберігається, звичайні пробіли — як є
+      const textKeep = (s)=>escText(String(s).replace(/[\r\n\t]/g,''));
 
-
-      function openTag(el){
-        let s = `<${el.nodeName.toLowerCase()}`;
-        for (const a of el.attributes){ s += ` ${a.name}="${attrEsc(a.value)}"`; }
-        return s + '>';
-      }
+      function openTag(el){ let s=`<${el.nodeName.toLowerCase()}`; for(const a of el.attributes) s+=` ${a.name}="${attrEsc(a.value)}"`; return s+'>'; }
       function closeTag(el){ return `</${el.nodeName.toLowerCase()}>`; }
 
       function onlyInlineInside(el){
@@ -399,45 +372,27 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
       }
 
       function printNode(n, indent, out){
-        if (n.nodeType===3){ // TEXT
-          const t = textKeep(n.nodeValue);
-          if (t) out.push('  '.repeat(indent) + t);
-          return;
-        }
+        if (n.nodeType===3){ const t=textKeep(n.nodeValue); if (t) out.push('  '.repeat(indent)+t); return; }
         if (n.nodeType!==1) return;
-
         const name=n.nodeName.toLowerCase();
-        if (voidSet.has(name)){ out.push('  '.repeat(indent) + openTag(n).replace('>',' />')); return; }
-
-        const line = openTag(n);
-        const inlineOnly = onlyInlineInside(n);
-
+        if (voidSet.has(name)){ out.push('  '.repeat(indent)+openTag(n).replace('>',' />')); return; }
+        const line=openTag(n);
+        const inlineOnly=onlyInlineInside(n);
         if (inlineOnly){
-          let inner='';
-          for (let c=n.firstChild; c; c=c.nextSibling){
-            if (c.nodeType===3) inner += textKeep(c.nodeValue);
-            else if (c.nodeType===1){ const tmp=[]; printNodeInline(c,tmp); inner+=tmp.join(''); }
-          }
-          out.push('  '.repeat(indent) + line + inner + closeTag(n));
+          let inner=''; for(let c=n.firstChild;c;c=c.nextSibling){ if(c.nodeType===3) inner+=textKeep(c.nodeValue); else if(c.nodeType===1){ const tmp=[]; printNodeInline(c,tmp); inner+=tmp.join(''); } }
+          out.push('  '.repeat(indent)+line+inner+closeTag(n));
         } else {
-          out.push('  '.repeat(indent) + line);
-          for (let c=n.firstChild; c; c=c.nextSibling){ printNode(c, indent+1, out); }
-          out.push('  '.repeat(indent) + closeTag(n));
+          out.push('  '.repeat(indent)+line);
+          for(let c=n.firstChild;c;c=c.nextSibling) printNode(c,indent+1,out);
+          out.push('  '.repeat(indent)+closeTag(n));
         }
       }
-      function printNodeInline(el, out){
-        const name=el.nodeName.toLowerCase();
-        if (voidSet.has(name)){ out.push(openTag(el).replace('>',' />')); return; }
-        let s=openTag(el), inner='';
-        for (let c=el.firstChild; c; c=c.nextSibling){
-          if (c.nodeType===3) inner += textKeep(c.nodeValue);
-          else if (c.nodeType===1){ const t=[]; printNodeInline(c,t); inner+=t.join(''); }
-        }
+      function printNodeInline(el,out){
+        const name=el.nodeName.toLowerCase(); if (voidSet.has(name)){ out.push(openTag(el).replace('>',' />')); return; }
+        let s=openTag(el), inner=''; for(let c=el.firstChild;c;c=c.nextSibling){ if(c.nodeType===3) inner+=textKeep(c.nodeValue); else if(c.nodeType===1){ const t=[]; printNodeInline(c,t); inner+=t.join(''); } }
         out.push(s+inner+closeTag(el));
       }
-
-      const out=[];
-      for (let n=root.firstChild; n; n=n.nextSibling){ printNode(n,0,out); }
+      const out=[]; for(let n=root.firstChild;n;n=n.nextSibling) printNode(n,0,out);
       return out.join('\n').trim();
     }
 
@@ -451,10 +406,8 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
       const root=doc.getElementById('__root');
 
       const opts={
-        unwrapExceptP: document.getElementById('opt-unwrap-except-p').checked,
         removeInline:document.getElementById('opt-remove-inline').checked,
         removeClassId:document.getElementById('opt-remove-class-id').checked,
-        removeSuccNbsp:document.getElementById('opt-remove-succ-nbsp').checked,
         removeEmpty:document.getElementById('opt-remove-empty').checked,
         removeOneNbsp:document.getElementById('opt-remove-one-nbsp').checked,
         removeSpan: document.getElementById('opt-remove-span').checked,
@@ -463,62 +416,79 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
         removeTables:document.getElementById('opt-remove-tables').checked,
         tableToEmptyP:document.getElementById('opt-table-to-empty-p').checked,
         removePInTables:document.getElementById('opt-remove-p-in-tables').checked,
+        brToP:document.getElementById('opt-br-to-p').checked,
+        normLists:document.getElementById('opt-norm-lists').checked,
+        allowList:document.getElementById('opt-allowlist').checked,
         nbspToSpace:document.getElementById('opt-nbsp-to-space').checked,
         strongToH2:document.getElementById('opt-strong-to-h2').checked,
         emToH3:document.getElementById('opt-em-to-h3').checked,
       };
 
+      // БАЗА: <div> → <p>
+      queryAll(root,'div').forEach(el=>replaceTag(el,'p'));
+
+      // Структурні дії
       if (opts.removeImages) queryAll(root,'img').forEach(el=>el.remove());
       if (opts.removeLinks)  queryAll(root,'a').forEach(el=>unwrap(el));
-      if (opts.removeSpan) queryAll(root, 'span').forEach(el => unwrap(el)); // видаляємо лише тег <span>, залишаючи вміст
+      if (opts.removeSpan)   queryAll(root,'span').forEach(el=>unwrap(el));
       if (opts.removePInTables) queryAll(root,'table p, thead p, tbody p, tr p, td p, th p').forEach(p=>unwrap(p));
       if (opts.strongToH2) queryAll(root,'strong').forEach(el=>replaceTag(el,'h2'));
       if (opts.emToH3)     queryAll(root,'em, i').forEach(el=>replaceTag(el,'h3'));
+
       if (opts.tableToEmptyP) queryAll(root,'table, thead, tbody, tr, td, th').forEach(el=>{ const p=document.createElement('p'); el.replaceWith(p); });
       if (opts.removeTables)  queryAll(root,'table, thead, tbody, tr, td, th').forEach(el=>unwrap(el));
 
       if (opts.removeInline)  queryAll(root,'[style]').forEach(el=>el.removeAttribute('style'));
       if (opts.removeClassId){ queryAll(root,'[class]').forEach(el=>el.removeAttribute('class')); queryAll(root,'[id]').forEach(el=>el.removeAttribute('id')); }
-      if (opts.unwrapExceptP) {
-  queryAll(root, '*').forEach(el => {
-    if (el.nodeName.toLowerCase() !== 'p') unwrap(el);
-  });
-}
 
-      // Рекурсивно прибираємо порожні елементи (включно з «<p><strong><em></em></strong></p>»)
+      // Якщо щось «розсипали» — збираємо абзаци: обгортаємо послідовності текст/інлайни в <p>
+      wrapInlineRunsIntoP(root);
+
+      // BR → P (за запитом)
+      if (opts.brToP){ brToParagraphs(root); }
+
+      // Нормалізація списків (– • 1.)
+      if (opts.normLists){ normalizeLists(root); }
+
+      // Білий список тегів (розгортання всього, що не в allowlist)
+      if (opts.allowList){
+        const allow = new Set(['p','h1','h2','h3','ul','ol','li','a','strong','em','br']);
+        queryAll(root,'*').forEach(el=>{ const n=el.nodeName.toLowerCase(); if(!allow.has(n)) unwrap(el); });
+      }
+
+      // Прибирання «порожнечі»
       if (opts.removeEmpty || opts.removeOneNbsp){
-        const isMeaningless = (el) => {
-          // NBSP вважаємо «порожнечею» у цій перевірці
-          const text = (el.textContent || '').replace(/\u00A0|\s/g,'');
-          // не видаляємо, якщо є «візуальні» елементи
-          if (el.querySelector && el.querySelector('img,br,hr,video,audio,iframe,svg,source')) return false;
-          return text==='';
-        };
-        const onlyNbspInnerHTML = (el) => /^(\s|\u00A0|&nbsp;)*$/.test(el.innerHTML || '');
+        const onlyNbsp = /^(\s|\u00A0|&nbsp;)*$/;
         let changed;
         do{
           changed=false;
           queryAll(root,'*').forEach(el=>{
-            if (opts.removeEmpty && isMeaningless(el)){ el.remove(); changed=true; return; }
-            if (opts.removeOneNbsp && !el.firstElementChild && onlyNbspInnerHTML(el)){ el.remove(); changed=true; }
+            const noChildren = !el.firstElementChild;
+            const inner = el.innerHTML || '';
+            if (opts.removeEmpty && noChildren && inner.replace(/\u00A0|\s/g,'')===''){ el.remove(); changed=true; return; }
+            if (opts.removeOneNbsp && noChildren && onlyNbsp.test(inner)){ el.remove(); changed=true; }
           });
         }while(changed);
       }
 
-      // Нормалізація <p>
+      // Нормалізація <p>: розгортання вкладених та схлопування послідовних порожніх
       (function normalizeP(){
         queryAll(root,'p p').forEach(inner=>unwrap(inner));
         const isBlank=el=>(!el.textContent||el.textContent.replace(/\u00A0|\s/g,'')==='')&&!el.firstElementChild;
         let changed; do{
-          changed=false;
-          const ps=queryAll(root,'p');
+          changed=false; const ps=queryAll(root,'p');
           for(let i=0;i<ps.length-1;i++){ const a=ps[i], b=ps[i+1]; if(isBlank(a)&&isBlank(b)){ b.remove(); changed=true; break; } }
         }while(changed);
       })();
 
+      // Серіалізація
       html = root.innerHTML;
-      if (opts.nbspToSpace)    html = html.replace(/&nbsp;|\u00A0/g,' ');
-      if (opts.removeSuccNbsp) html = html.replace(/(?:&nbsp;|\u00A0){2,}/g,' ');
+
+      // NBSP → пробіл + стискання до одного
+      if (opts.nbspToSpace){
+        html = html.replace(/(?:&nbsp;|\u00A0)/g,' ');
+        html = html.replace(/ {2,}/g,' ');
+      }
 
       // Пошук/заміна (літерально)
       const rows=Array.from(document.querySelectorAll('.find-row'));
@@ -530,9 +500,71 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
         html=html.replace(new RegExp(esc,'g'), repl);
       }
 
+      // Показ праворуч + дзеркало зліва (щоб обидві панелі були узгоджені)
       codeRaw.value = prettyFormat(html);
       renderHighlighted();
+      editor.innerHTML = html;           // <- ліве поле тепер показує актуальний DOM
+      normalizeEditorSemantic();         // дрібна семантична правка
     });
+
+    /* ===== Допоміжні алгоритми очищення ===== */
+    // Обгортання послідовностей «текст/інлайни» у <p>
+    function wrapInlineRunsIntoP(root){
+      const inlineSet=new Set(['a','span','strong','em','b','i','u','s','sub','sup','small','abbr','code','kbd','mark','q','cite','time','var','label','img','br']);
+      for(let node=root.firstChild; node; ){
+        let next=node.nextSibling;
+        const pack=[];
+        function isInlineOrText(n){
+          if (n.nodeType===3) return n.nodeValue.trim()!=='';
+          if (n.nodeType===1) return inlineSet.has(n.nodeName.toLowerCase());
+          return false;
+        }
+        while(node && isInlineOrText(node)){ pack.push(node); node=node.nextSibling; }
+        if (pack.length){
+          const p=document.createElement('p');
+          root.insertBefore(p, pack[0]);
+          for(const n of pack) p.appendChild(n);
+        }
+        if(!pack.length) node=next;
+      }
+    }
+
+    // <br><br> ⇒ розбиваємо на абзаци
+    function brToParagraphs(root){
+      // спочатку гарантуємо, що весь «розсипаний» текст уже загорнуто в <p>
+      wrapInlineRunsIntoP(root);
+      let html=root.innerHTML;
+      html=html.replace(/(?:<br\s*\/?>\s*){2,}/gi,'</p><p>');
+      root.innerHTML=html;
+    }
+
+    // Нормалізація списків: -, •, 1. → <ul>/<ol>
+    function normalizeLists(root){
+      const paras = Array.from(root.querySelectorAll('p'));
+      let i=0;
+      while(i<paras.length){
+        const p=paras[i];
+        const txt=p.textContent.trim();
+        let type=null, body='';
+        if (/^[-–—]\s+/.test(txt) || /^•\s+/.test(txt)){ type='ul'; body=txt.replace(/^([-–—]|•)\s+/,''); }
+        else if (/^\d+[.)]\s+/.test(txt)){ type='ol'; body=txt.replace(/^\d+[.)]\s+/,''); }
+        if (!type){ i++; continue; }
+        const list=document.createElement(type); p.parentNode.insertBefore(list,p);
+        const pushLi = (paraText, paraEl)=>{
+          const li=document.createElement('li'); li.innerHTML = (paraEl.innerHTML || '').replace(/^(\s*([-–—]|•|\d+[.)])\s+)/,'');
+          list.appendChild(li); paraEl.remove();
+        };
+        pushLi(body,p);
+        let j=i+1;
+        while(j<paras.length){
+          const p2=paras[j]; const t2=p2.textContent.trim();
+          if (type==='ul' && (/^[-–—]\s+/.test(t2) || /^•\s+/.test(t2))){ pushLi(t2,p2); j++; }
+          else if (type==='ol' && /^\d+[.)]\s+/.test(t2)){ pushLi(t2,p2); j++; }
+          else break;
+        }
+        i=j; // стрибаємо за групу списку
+      }
+    }
 
     /* ===== Стартове повідомлення ===== */
     editor.innerHTML = '<p><strong>Ласкаво просимо!</strong> Вставте текст ліворуч. Праворуч з’явиться HTML-код. Оберіть опції очищення і натисніть <em>Очистити</em>.</p>';
