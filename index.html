@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML (MVP) — версія 8</title>
+<title>Очищувач HTML (MVP) — версія 10</title>
   <style>
     /* ===== ТЕМИ ===== */
     :root{
@@ -136,13 +136,13 @@
       <div class="card">
         <h3>Опції очищення</h3>
         <div class="options">
-          <label><input type="checkbox" id="opt-remove-attrs"> Видалити всі атрибути тегів</label>
+          <label><input type="checkbox" id="opt-unwrap-except-p"> Прибрати всі теги, крім &lt;p&gt;</label>
           <label><input type="checkbox" id="opt-remove-inline"> Видалити inline-стилі</label>
-          <label><input type="checkbox" id="opt-remove-class-id"> Видалити класи та ID</label>
+          <label><input type="checkbox" id="opt-remove-class-id"> Прибрати класи та ID</label>
           <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &amp;nbsp;</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
           <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги, що містять лише &amp;nbsp;</label>
-          <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;/&lt;div&gt; на &lt;p&gt;</label>
+          <label><input type="checkbox" id="opt-remove-span"> Видалити тег &lt;span&gt;</label>
           <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
           <label><input type="checkbox" id="opt-remove-links"> Видалити посилання (залишити текст)</label>
           <label><input type="checkbox" id="opt-remove-tables"> Розгорнути таблиці (залишити вміст)</label>
@@ -354,12 +354,15 @@
       const doc = parser.parseFromString(`<div id="__root">${html}</div>`, 'text/html');
       const root = doc.getElementById('__root');
 
+      // Глобально: всі <div> міняємо на <p> (атрибути ігноруємо)
+queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
+
       const voidSet  = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
       const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption','hr']);
       const inlineSet= new Set(['a','span','strong','em','b','i','u','s','sub','sup','small','abbr','code','kbd','mark','q','cite','time','var','label','br','img']);
-
       const attrEsc = (s)=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const textKeep = (s)=>escText(String(s).replace(/[\r\n\t]/g,'')); // NBSP зберігається, звичайні пробіли — як є
+
 
       function openTag(el){
         let s = `<${el.nodeName.toLowerCase()}`;
@@ -432,13 +435,13 @@
       const root=doc.getElementById('__root');
 
       const opts={
-        removeAttrs:document.getElementById('opt-remove-attrs').checked,
+        unwrapExceptP: document.getElementById('opt-unwrap-except-p').checked,
         removeInline:document.getElementById('opt-remove-inline').checked,
         removeClassId:document.getElementById('opt-remove-class-id').checked,
         removeSuccNbsp:document.getElementById('opt-remove-succ-nbsp').checked,
         removeEmpty:document.getElementById('opt-remove-empty').checked,
         removeOneNbsp:document.getElementById('opt-remove-one-nbsp').checked,
-        spanDivToP:document.getElementById('opt-span-div-to-p').checked,
+        removeSpan: document.getElementById('opt-remove-span').checked,
         removeImages:document.getElementById('opt-remove-images').checked,
         removeLinks:document.getElementById('opt-remove-links').checked,
         removeTables:document.getElementById('opt-remove-tables').checked,
@@ -451,7 +454,8 @@
 
       if (opts.removeImages) queryAll(root,'img').forEach(el=>el.remove());
       if (opts.removeLinks)  queryAll(root,'a').forEach(el=>unwrap(el));
-      if (opts.spanDivToP){ queryAll(root,'span, div').forEach(el=>replaceTag(el,'p')); }
+      if (opts.removeSpan) queryAll(root, 'span').forEach(el => unwrap(el)); // видаляємо лише тег <span>, залишаючи вміст
+    }
       if (opts.removePInTables) queryAll(root,'table p, thead p, tbody p, tr p, td p, th p').forEach(p=>unwrap(p));
       if (opts.strongToH2) queryAll(root,'strong').forEach(el=>replaceTag(el,'h2'));
       if (opts.emToH3)     queryAll(root,'em, i').forEach(el=>replaceTag(el,'h3'));
@@ -460,7 +464,11 @@
 
       if (opts.removeInline)  queryAll(root,'[style]').forEach(el=>el.removeAttribute('style'));
       if (opts.removeClassId){ queryAll(root,'[class]').forEach(el=>el.removeAttribute('class')); queryAll(root,'[id]').forEach(el=>el.removeAttribute('id')); }
-      if (opts.removeAttrs){   queryAll(root,'*').forEach(el=>{ [...el.attributes].forEach(a=>el.removeAttribute(a.name)); }); }
+      if (opts.unwrapExceptP) {
+  queryAll(root, '*').forEach(el => {
+    if (el.nodeName.toLowerCase() !== 'p') unwrap(el);
+  });
+}
 
       // Рекурсивно прибираємо порожні елементи (включно з «<p><strong><em></em></strong></p>»)
       if (opts.removeEmpty || opts.removeOneNbsp){
