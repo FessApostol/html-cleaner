@@ -3,40 +3,48 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Очищувач HTML (MVP) — версія 16</title>
+  <title>Очищувач HTML (MVP) — версія 17</title>
+
   <style>
+    /* ===== Базові змінні теми ===== */
     :root { --gap: 14px; --code-font-size: 14px; }
+
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #0b1020; color: #e7ecf7; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+           background: #0b1020; color: #e7ecf7; }
     header { padding: 14px 18px; border-bottom: 1px solid #1b2445; background: #0f1630; position: sticky; top: 0; z-index: 5; }
     header h1 { margin: 0; font-size: 18px; font-weight: 600; }
 
     .wrap { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
 
-    /* Панелі редактора */
+    /* ===== Панелі редактора ===== */
     .panel { background: #0f1630; border: 1px solid #1b2445; border-radius: 10px; display: flex; flex-direction: column; min-height: 380px; overflow: hidden; }
     .panel h2 { margin: 0; padding: 12px 12px; font-size: 14px; border-bottom: 1px solid #1b2445; background: #121a3a; }
 
-    /* Тулбар форматування */
+    /* ===== Тулбар форматування ===== */
     .toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 10px 8px; border-bottom: 1px solid #1b2445; background: #0e1431; }
     .toolbar button, .toolbar select { background: #16224a; color: #e7ecf7; border: 1px solid #2a3a78; border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
     .toolbar button:hover, .toolbar select:hover { background: #1a2958; }
     .toolbar button:active { transform: translateY(1px); }
 
+    /* ===== Ліва панель (WYSIWYG). Примусово світлий текст для контрасту в нічній темі ===== */
     #editor { padding: 12px; height: 520px; outline: none; line-height: 1.5; overflow: auto; resize: vertical; }
     #editor:empty:before{ content: 'Вставте або напишіть текст тут…'; color:#8da0d0; }
+    /* ВАЖЛИВО: у нічній темі кольори з Word/GDocs можуть бути темними — примусово робимо світлий текст лише всередині редактора */
+    #editor, #editor * { color: #e9eefc !important; }
 
-    #code { width: 100%; padding: 12px; height: 520px; background: #0a112b; color: #d7e1ff; border: 0; resize: vertical; outline: none; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: var(--code-font-size); line-height: 1.5; }
+    /* ===== Права панель (HTML) ===== */
+    #code { width: 100%; padding: 12px; height: 520px; background: #0a112b; color: #d7e1ff; border: 0; resize: vertical; outline: none; overflow: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: var(--code-font-size); line-height: 1.5; }
 
     .foot-btns { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #1b2445; background: #0e1431; }
     .btn { background: #2952ff; border: 1px solid #4669ff; color: #fff; padding: 9px 12px; border-radius: 10px; font-size: 14px; cursor: pointer; }
     .btn.secondary { background: #16224a; border-color:#2a3a78; color:#e7ecf7; }
     .btn:disabled { opacity: .6; cursor: not-allowed; }
 
-    /* Блоки Опцій + Пошук/Заміна */
+    /* ===== Нижні картки ===== */
     .lower { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
-
-    .card { background: #0f1630; border: 1px solid #1b2445; border-radius: 10px; padding: 10px 12px 8px; }
+    .card { background: #0f1630; border: 1px solid #1b2445; border-radius: 10px; padding: 10px 12px 6px; }
     .card h3 { margin: 4px 0 10px; font-size: 14px; font-weight: 600; }
     .card .sub { display:block; margin-top:-6px; margin-bottom:8px; opacity:.8; font-size:12px; }
 
@@ -44,13 +52,15 @@
     .options label { display: block; break-inside: avoid; margin: 6px 0; font-size: 13px; cursor: pointer; white-space: normal; word-break: break-word; }
     .options input { margin-right: 6px; }
 
+    /* Білий список тегів */
+    .wl-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .wl-block { padding:8px; border:1px dashed #243268; border-radius:8px; }
+    .wl-block h4 { margin:0 0 6px; font-size:13px; opacity:.9; }
+    .wl-list label { display:block; font-size:13px; margin:6px 0; }
+    .wl-disabled { opacity:.55; pointer-events:none; }
+
     .find-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin: 8px 0; }
     .find-row input { background: #0a112b; color:#e7ecf7; border:1px solid #2a3a78; border-radius:8px; padding:8px 10px; font-size:13px; }
-
-    /* Локальні стилі для білого списку (мінімум) */
-    .wl-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .wl-grid ul { list-style: disc; margin: 0; padding-left: 20px; }
-    .wl-grid li { margin: 4px 0; }
     .hr { border-top: 1px dashed #26325f; margin: 10px 0; }
 
     @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } .lower { grid-template-columns: 1fr; } }
@@ -58,11 +68,11 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 16</h1>
+    <h1>Очищувач HTML (MVP) — версія 17</h1>
   </header>
 
   <main class="wrap">
-    <!-- ЛІВА ПАНЕЛЬ: WYSIWYG РЕДАКТОР ТЕКСТУ -->
+    <!-- ===== ЛІВА ПАНЕЛЬ: WYSIWYG редактор (коментарі українською) ===== -->
     <section class="panel" aria-label="Текст">
       <h2>Текст</h2>
       <div class="toolbar" aria-label="Засоби форматування">
@@ -71,7 +81,6 @@
           <option value="h1">H1</option>
           <option value="h2">H2</option>
           <option value="h3">H3</option>
-          <option value="h4">H4</option>
           <option value="blockquote">Цитата</option>
           <option value="pre">Pre</option>
         </select>
@@ -104,7 +113,7 @@
       <div id="editor" contenteditable="true"></div>
     </section>
 
-    <!-- ПРАВА ПАНЕЛЬ: HTML-КОД -->
+    <!-- ===== ПРАВА ПАНЕЛЬ: HTML-код ===== -->
     <section class="panel" aria-label="HTML-код">
       <h2>HTML-код</h2>
       <textarea id="code" spellcheck="false" placeholder="Тут з’явиться HTML…"></textarea>
@@ -117,59 +126,60 @@
       </div>
     </section>
 
-    <!-- НИЖНЄ ПОЛЕ: ОПЦІЇ, БІЛИЙ СПИСОК, ПОШУК/ЗАМІНА -->
+    <!-- ===== НИЖНІ КАРТКИ ===== -->
     <section class="lower">
+      <!-- Опції очищення -->
       <div class="card">
         <h3>Опції очищення</h3>
         <div class="options" id="options">
           <label><input type="checkbox" id="opt-remove-attrs"> Видалити всі атрибути тегів</label>
           <label><input type="checkbox" id="opt-remove-inline"> Видалити inline-стилі</label>
-          <label><input type="checkbox" id="opt-remove-class-id"> Видалити класи та ID</label>
-          <label><input type="checkbox" id="opt-remove-all-tags"> Видалити всі теги (залишити тільки текст)</label>
-          <label><input type="checkbox" id="opt-remove-succ-nbsp"> Прибрати послідовні &amp;nbsp;</label>
+          <label><input type="checkbox" id="opt-remove-class-id"> Прибрати класи та ID</label>
           <label><input type="checkbox" id="opt-remove-empty"> Видалити порожні теги</label>
           <label><input type="checkbox" id="opt-remove-one-nbsp"> Видалити теги, що містять лише &amp;nbsp;</label>
-          <label><input type="checkbox" id="opt-span-div-to-p"> Замінити теги &lt;span&gt;/&lt;div&gt; на &lt;p&gt;</label>
-          <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
+          <label><input type="checkbox" id="opt-nbsp-to-space"> Замінити &amp;nbsp; на пробіл (+ звести послідовність до 1)</label>
           <label><input type="checkbox" id="opt-remove-links"> Видалити посилання (залишити текст)</label>
+          <label><input type="checkbox" id="opt-remove-images"> Видалити зображення</label>
           <label><input type="checkbox" id="opt-remove-tables"> Розгорнути таблиці (залишити вміст)</label>
-          <label><input type="checkbox" id="opt-table-to-empty-p"> Замінити теги таблиць на порожні &lt;p&gt;</label>
-          <div class="hr"></div>
-          <label><input type="checkbox" id="opt-remove-p-in-tables"> Видалити теги &lt;p&gt; у таблицях</label>
-          <label><input type="checkbox" id="opt-nbsp-to-space"> Замінити &amp;nbsp; на пробіл</label>
           <label><input type="checkbox" id="opt-strong-to-h2"> Замінити &lt;strong&gt; на &lt;h2&gt;</label>
           <label><input type="checkbox" id="opt-em-to-h3"> Замінити &lt;em&gt;/&lt;i&gt; на &lt;h3&gt;</label>
         </div>
       </div>
 
-      <!-- НОВЕ: Білий список тегів -->
-      <div class="card" id="whitelist-card">
+      <!-- Білий список тегів -->
+      <div class="card" id="wlCard">
         <h3>Залишити Білий список тегів</h3>
-        <span class="sub">Коли увімкнено — залишимо тільки обрані теги, решту розгорнемо (текст збережемо).</span>
-
-        <label style="display:block;margin:8px 0 10px;">
-          <input type="checkbox" id="wl-enable"> Увімкнути Білий список
+        <span class="sub">(коли ввімкнено — залишимо тільки обрані теги, решту розгорнемо)</span>
+        <label style="display:block; margin-bottom:8px;">
+          <input type="checkbox" id="opt-wl-enable"> Увімкнути Білий список
         </label>
 
-        <div class="wl-grid">
-          <ul>
-            <li><label><input type="checkbox" data-tag="p" checked> &lt;p&gt; — абзац</label></li>
-            <li><label><input type="checkbox" data-tag="h1"> &lt;h1&gt; — заголовок 1</label></li>
-            <li><label><input type="checkbox" data-tag="h2" checked> &lt;h2&gt; — заголовок 2</label></li>
-            <li><label><input type="checkbox" data-tag="h3"> &lt;h3&gt; — заголовок 3</label></li>
-            <li><label><input type="checkbox" data-tag="strong" checked> &lt;strong&gt; — жирний</label></li>
-            <li><label><input type="checkbox" data-tag="em" checked> &lt;em&gt; — курсив</label></li>
-            <li><label><input type="checkbox" data-tag="a" checked> &lt;a&gt; — посилання</label></li>
-          </ul>
-          <ul>
-            <li><label><input type="checkbox" data-tag="ul" checked> &lt;ul&gt; — маркований список</label></li>
-            <li><label><input type="checkbox" data-tag="ol" checked> &lt;ol&gt; — нумерований список</label></li>
-            <li><label><input type="checkbox" data-tag="li" checked> &lt;li&gt; — пункт списку</label></li>
-          </ul>
+        <div id="wlBox" class="wl-grid wl-disabled" aria-disabled="true">
+          <div class="wl-block">
+            <h4>Текст та заголовки</h4>
+            <div class="wl-list">
+              <label><input type="checkbox" class="wl" value="p"   checked> &lt;p&gt; — абзац</label>
+              <label><input type="checkbox" class="wl" value="h1"  checked> &lt;h1&gt; — заголовок 1</label>
+              <label><input type="checkbox" class="wl" value="h2"  checked> &lt;h2&gt; — заголовок 2</label>
+              <label><input type="checkbox" class="wl" value="h3"  checked> &lt;h3&gt; — заголовок 3</label>
+              <label><input type="checkbox" class="wl" value="strong" checked> &lt;strong&gt; — жирний</label>
+              <label><input type="checkbox" class="wl" value="em"  checked> &lt;em&gt; — курсив</label>
+              <label><input type="checkbox" class="wl" value="a"   checked> &lt;a&gt; — посилання</label>
+            </div>
+          </div>
+          <div class="wl-block">
+            <h4>Списки</h4>
+            <div class="wl-list">
+              <label><input type="checkbox" class="wl" value="ul"  checked> &lt;ul&gt; — маркований список</label>
+              <label><input type="checkbox" class="wl" value="ol"  checked> &lt;ol&gt; — нумерований список</label>
+              <label><input type="checkbox" class="wl" value="li"  checked> &lt;li&gt; — пункт списку</label>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="card">
+      <!-- Пошук/Заміна -->
+      <div class="card" style="grid-column: 1 / -1;">
         <h3>Пошук і заміна у вихідному HTML</h3>
         <span class="sub">Виконується після очищення; поля <b>чутливі до регістру</b>.</span>
         <div id="findBox"></div>
@@ -179,7 +189,9 @@
   </main>
 
   <script>
-    // Посилання на елементи інтерфейсу (не покладаємось на window.id)
+    /* =========================
+       Посилання на елементи
+       ========================= */
     const editor = document.getElementById('editor');
     const codeArea = document.getElementById('code');
     const undoBtn = document.getElementById('btnUndo');
@@ -193,7 +205,12 @@
     const fontMinus = document.getElementById('fontMinus');
     const btnCopy = document.getElementById('btnCopy');
 
-    // --- ТУЛБАР: базові та популярні команди форматування (українські коментарі) ---
+    // Білий список
+    const wlEnable = document.getElementById('opt-wl-enable');
+    const wlBox = document.getElementById('wlBox');
+    const wlChecks = () => Array.from(wlBox.querySelectorAll('input.wl'));
+
+    // --- Тулбар: базові команди форматування ---
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.execCommand(btn.dataset.cmd, false);
@@ -207,7 +224,9 @@
     });
 
     fontSize.addEventListener('change', () => {
-      if (!fontSize.value) return; document.execCommand('fontSize', false, fontSize.value); syncToCode();
+      if (!fontSize.value) return;
+      document.execCommand('fontSize', false, fontSize.value);
+      syncToCode();
     });
 
     mkLink.addEventListener('click', () => {
@@ -223,17 +242,18 @@
 
     clearFmt.addEventListener('click', () => {
       document.execCommand('removeFormat');
-      editor.querySelectorAll('span').forEach(s => s.replaceWith(...s.childNodes));
+      editor.querySelectorAll('span').forEach(s => s.replaceWith(...s.childNodes)); // розгортаємо span
       syncToCode();
     });
 
-    // --- ЖИВЕ ДЗЕРКАЛО HTML ---
-    const undoStack = [];
+    // Живе дзеркало HTML (ліворуч → праворуч)
     function syncToCode(){ codeArea.value = prettyHtml(editor.innerHTML); }
     editor.addEventListener('input', syncToCode);
     editor.addEventListener('paste', () => setTimeout(syncToCode));
+    // І навпаки: редагуєш код — одразу бачиш ліворуч
+    codeArea.addEventListener('input', () => { editor.innerHTML = codeArea.value; });
 
-    // --- КЕРУВАННЯ РОЗМІРОМ ШРИФТУ КОДУ ---
+    // Керування розміром шрифту коду
     function updateCodeFont(delta){
       const cs = getComputedStyle(document.documentElement).getPropertyValue('--code-font-size').trim();
       const px = parseInt(cs || '14', 10) + delta;
@@ -242,281 +262,210 @@
     fontPlus.addEventListener('click', () => updateCodeFont(+1));
     fontMinus.addEventListener('click', () => updateCodeFont(-1));
 
-    // --- КОПІЮВАННЯ У БУФЕР ---
+    // Копіювання
     btnCopy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(codeArea.value); btnCopy.textContent = 'Скопійовано!'; setTimeout(()=>btnCopy.textContent='Копіювати',1200);} catch(e){
+      try {
+        await navigator.clipboard.writeText(codeArea.value);
+        btnCopy.textContent = 'Скопійовано!';
+        setTimeout(()=>btnCopy.textContent='Копіювати', 1200);
+      } catch(e){
         codeArea.select(); document.execCommand('copy');
       }
     });
 
-    // --- ВІДМІНА (UNDO) ДЛЯ ПАНЕЛІ КОДУ ---
+    // Undo для поля коду
+    const undoStack = [];
     function pushUndo(){ undoStack.push(codeArea.value); undoBtn.disabled = false; }
     undoBtn.addEventListener('click', () => {
-      if (!undoStack.length) return; codeArea.value = undoStack.pop(); if (!undoStack.length) undoBtn.disabled = true;
+      if (!undoStack.length) return;
+      codeArea.value = undoStack.pop();
+      if (!undoStack.length) undoBtn.disabled = true;
+      editor.innerHTML = codeArea.value;
     });
 
-    // --- UI «Пошук/Заміна» ---
+    // UI «Пошук/Заміна»
     const findBox = document.getElementById('findBox');
     function addFindRow(findVal = '', replVal = ''){
       const row = document.createElement('div');
       row.className = 'find-row';
-      row.innerHTML = `<input type="text" placeholder="Що знайти" value="${findVal.replaceAll('"','&quot;')}">`+
-                      `<input type="text" placeholder="На що замінити" value="${replVal.replaceAll('"','&quot;')}">`+
-                      `<button class="btn secondary" type="button">Видалити</button>`;
+      row.innerHTML =
+        `<input type="text" placeholder="Що знайти" value="${findVal.replaceAll('"','&quot;')}">`+
+        `<input type="text" placeholder="На що замінити" value="${replVal.replaceAll('"','&quot;')}">`+
+        `<button class="btn secondary" type="button">Видалити</button>`;
       row.lastElementChild.addEventListener('click', () => row.remove());
       findBox.appendChild(row);
     }
     document.getElementById('btnAddRow').addEventListener('click', () => addFindRow());
-    addFindRow(); // одна пара за замовчуванням
+    addFindRow();
 
-    // --- Допоміжні утиліти роботи з DOM ---
+    // Утиліти по DOM
     function unwrap(el){
-      const parent = el.parentNode; if (!parent) return;
-      while(el.firstChild) parent.insertBefore(el.firstChild, el);
-      parent.removeChild(el);
+      const p = el.parentNode; if (!p) return;
+      while(el.firstChild) p.insertBefore(el.firstChild, el);
+      p.removeChild(el);
     }
-    function replaceTag(el, tagName){
-      const neo = document.createElement(tagName);
+    function replaceTag(el, tag){
+      const neo = el.ownerDocument.createElement(tag);
       while(el.firstChild) neo.appendChild(el.firstChild);
-      el.replaceWith(neo);
-      return neo;
+      el.replaceWith(neo); return neo;
     }
-    function queryAll(root, selector){ return Array.from(root.querySelectorAll(selector)); }
+    function queryAll(root, sel){ return Array.from(root.querySelectorAll(sel)); }
 
-    // --- Форматування HTML для виводу (відступи + нові рядки) ---
+    // Форматування HTML: «в рядок», без зайвих переносів
     function prettyHtml(html){
-      try {
+      try{
         html = String(html);
+        // Розбиваємо на токени
         const tokens = [];
         let i = 0;
-        while (i < html.length) {
+        while(i < html.length){
           const lt = html.indexOf('<', i);
-          if (lt < 0) { const tail = html.slice(i); if (tail.trim()) tokens.push(tail); break; }
+          if (lt < 0){ const tail = html.slice(i); if (tail.trim()) tokens.push(tail); break; }
           const text = html.slice(i, lt);
           if (text.trim()) tokens.push(text);
-          const gt = html.indexOf('>', lt + 1);
-          if (gt < 0) { tokens.push(html.slice(lt)); break; }
-          tokens.push(html.slice(lt, gt + 1));
+          const gt = html.indexOf('>', lt+1);
+          if (gt < 0){ tokens.push(html.slice(lt)); break; }
+          tokens.push(html.slice(lt, gt+1));
           i = gt + 1;
         }
-        const voidSet = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-        const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption','hr']);
-        const isTag = (t) => t.startsWith('<') && t.endsWith('>');
-        const tagName = (tag) => { let j = tag[1] === '/' ? 2 : 1; let name=''; while (j < tag.length){ const ch = tag[j]; if (ch === ' ' || ch === '>' || ch === '/') break; name += ch; j++; } return name.toLowerCase(); };
-        const isCloseTag = (tag) => tag[1] === '/';
-        const isSelfClosing = (tag) => tag[tag.length-2] === '/';
-        let indent = 0; const out = [];
-        for (const t of tokens){
+        const isTag = t => t.startsWith('<') && t.endsWith('>');
+        const isClose = t => isTag(t) && t[1]==='/';
+        const nameOf = t => { let j = t[1]==='/'?2:1, n=''; for(;j<t.length;j++){ const c=t[j]; if(c===' '||c==='>'||c==='/') break; n+=c; } return n.toLowerCase(); };
+        const isSelf = t => /\/>$/.test(t);
+        const voidSet = new Set(['br','hr','img','input','meta','link','source','track','wbr','area','base','col','embed','param']);
+        const blockSet = new Set(['html','head','body','div','p','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','section','article','header','footer','nav','blockquote','pre','figure','figcaption']);
+
+        const out = []; let indent = 0;
+        for(let k=0;k<tokens.length;k++){
+          const t = tokens[k];
+
+          // Випадок «відкриваючий блок + текст + закриваючий того ж блоку» → в один рядок.
           if (isTag(t)){
-            const name = tagName(t);
-            const close = isCloseTag(t);
-            const selfc = isSelfClosing(t) || voidSet.has(name);
-            const isBlock = blockSet.has(name);
-            if (close && isBlock) indent = Math.max(0, indent-1);
+            const nm = nameOf(t);
+            const isBlock = blockSet.has(nm);
+            const selfc = isSelf(t) || voidSet.has(nm);
+            const nxt = tokens[k+1], nxt2 = tokens[k+2];
+            if (!isClose(t) && isBlock && !selfc && nxt && nxt2 && !isTag(nxt) && isTag(nxt2) && nameOf(nxt2)===nm){
+              out.push('  '.repeat(indent) + t + nxt.trim() + nxt2);
+              k += 2;
+              continue;
+            }
+            if (isClose(t) && isBlock) indent = Math.max(0, indent-1);
             out.push('  '.repeat(indent) + t);
-            if (!close && isBlock && !selfc) indent++;
+            if (!isClose(t) && isBlock && !selfc) indent++;
           } else {
             const text = t.trim();
             if (text) out.push('  '.repeat(indent) + text);
           }
         }
-        return out.join('\n').trim();
-      } catch (e) { return String(html); }
+        return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      }catch(e){ return String(html); }
     }
 
-    /* === Білий список тегів: читання + застосування === */
-
-    // Зчитати стан та дозволені теги з картки
-    function readWhitelistOptions() {
-      const card = document.getElementById('whitelist-card');
-      if (!card) return { enabled: false, allowed: new Set() };
-      const enabled = card.querySelector('#wl-enable')?.checked ?? false;
-      const allowed = new Set();
-      card.querySelectorAll('input[type="checkbox"][data-tag]').forEach(cb => {
-        if (cb.checked) allowed.add(cb.getAttribute('data-tag').toLowerCase());
-      });
-      return { enabled, allowed };
+    /* =========================
+       Білий список — UI
+       ========================= */
+    function refreshWhitelistUI(){
+      const on = wlEnable.checked;
+      wlBox.classList.toggle('wl-disabled', !on);
+      wlChecks().forEach(cb => cb.disabled = !on);
     }
+    wlEnable.addEventListener('change', refreshWhitelistUI);
+    refreshWhitelistUI();
 
-    // Обгорнути «висячі» текстові вузли у <p>, щоби не рвався текст
-    function wrapRunsIntoParagraphs(root, doc, blockAllowed) {
-      const children = Array.from(root.childNodes);
-      const newChildren = [];
-      let buffer = [];
-
-      const flush = () => {
-        if (!buffer.length) return;
-        const hasMeaningful = buffer.some(n =>
-          n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim() !== '')
-        );
-        if (!hasMeaningful) { buffer = []; return; }
-        const p = doc.createElement('p');
-        buffer.forEach(n => p.appendChild(n));
-        newChildren.push(p);
-        buffer = [];
-      };
-
-      for (const n of children) {
-        if (n.nodeType === 1) {
-          const tag = n.tagName.toLowerCase();
-          if (blockAllowed.has(tag)) { flush(); newChildren.push(n); }
-          else { buffer.push(n); }
-        } else if (n.nodeType === 3) {
-          const parts = n.nodeValue.split(/\n+/);
-          parts.forEach((txt, i) => {
-            if (txt) buffer.push(doc.createTextNode(txt));
-            if (i < parts.length - 1) flush();
-          });
-        }
-      }
-      flush();
-      root.innerHTML = '';
-      newChildren.forEach(n => root.appendChild(n));
-    }
-
-    // Застосувати білий список до DOM-дерева
-    function applyWhitelist(root, doc, allowed) {
-      if (!allowed || !allowed.size) return;
-
-      const blockAllowed = new Set(['p','h1','h2','h3','ul','ol','li']);
-      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
-      const toProcess = [];
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) toProcess.push(node);
-
-      toProcess.forEach(el => {
-        const tag = el.tagName.toLowerCase();
-        if (allowed.has(tag)) return;
-
-        if (tag === 'br') { el.replaceWith(doc.createTextNode('\n')); return; }
-
-        const looksBlock = /^(div|section|article|header|footer|table|thead|tbody|tr|td|th|blockquote|pre|figure|figcaption|span)$/i.test(tag);
-        if (looksBlock && el.childElementCount === 0 && el.textContent.trim() !== '') {
-          const p = doc.createElement('p');
-          p.textContent = el.textContent;
-          el.replaceWith(p);
-        } else {
-          while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
-          el.remove();
-        }
-      });
-
-      wrapRunsIntoParagraphs(root, doc, blockAllowed);
-
-      // Нормалізуємо списки
-      root.querySelectorAll('ul,ol').forEach(list => {
-        Array.from(list.childNodes).forEach(n => {
-          if (n.nodeType === 3 && n.textContent.trim()) {
-            const li = doc.createElement('li'); li.textContent = n.textContent.trim();
-            list.insertBefore(li, n); n.remove();
-          } else if (n.nodeType === 1 && n.tagName.toLowerCase() !== 'li') {
-            const li = doc.createElement('li'); li.appendChild(n.cloneNode(true));
-            n.replaceWith(li);
-          }
-        });
-      });
-    }
-
-    // --- ОСНОВНИЙ ПАЙПЛАЙН ОЧИЩЕННЯ ---
+    /* =========================
+       Основний пайплайн «Очистити»
+       ========================= */
     document.getElementById('btnClean').addEventListener('click', () => {
       pushUndo();
       let html = codeArea.value || editor.innerHTML || '';
 
-      // Парсимо у DOM для структурних операцій
+      // Парсимо у DOM
       const parser = new DOMParser();
       const doc = parser.parseFromString(`<div id="__root">${html}</div>`, 'text/html');
       const root = doc.getElementById('__root');
 
-      // Читання опцій
+      // Опції
       const opts = {
-        removeAttrs: document.getElementById('opt-remove-attrs').checked,
-        removeInline: document.getElementById('opt-remove-inline').checked,
-        removeClassId: document.getElementById('opt-remove-class-id').checked,
-        removeAllTags: document.getElementById('opt-remove-all-tags').checked,
-        removeSuccNbsp: document.getElementById('opt-remove-succ-nbsp').checked,
-        removeEmpty: document.getElementById('opt-remove-empty').checked,
-        removeOneNbsp: document.getElementById('opt-remove-one-nbsp').checked,
-        spanDivToP: document.getElementById('opt-span-div-to-p').checked,
-        removeImages: document.getElementById('opt-remove-images').checked,
-        removeLinks: document.getElementById('opt-remove-links').checked,
-        removeTables: document.getElementById('opt-remove-tables').checked,
-        tableToEmptyP: document.getElementById('opt-table-to-empty-p').checked,
-        removePInTables: document.getElementById('opt-remove-p-in-tables').checked,
-        nbspToSpace: document.getElementById('opt-nbsp-to-space').checked,
-        strongToH2: document.getElementById('opt-strong-to-h2').checked,
-        emToH3: document.getElementById('opt-em-to-h3').checked,
+        removeAttrs:        document.getElementById('opt-remove-attrs').checked,
+        removeInline:       document.getElementById('opt-remove-inline').checked,
+        removeClassId:      document.getElementById('opt-remove-class-id').checked,
+        removeEmpty:        document.getElementById('opt-remove-empty').checked,
+        removeOneNbsp:      document.getElementById('opt-remove-one-nbsp').checked,
+        nbspToSpace:        document.getElementById('opt-nbsp-to-space').checked,
+        removeLinks:        document.getElementById('opt-remove-links').checked,
+        removeImages:       document.getElementById('opt-remove-images').checked,
+        removeTables:       document.getElementById('opt-remove-tables').checked,
+        strongToH2:         document.getElementById('opt-strong-to-h2').checked,
+        emToH3:             document.getElementById('opt-em-to-h3').checked,
+        wlEnabled:          wlEnable.checked
       };
 
-      // Білий список — читаємо відразу
-      const wl = readWhitelistOptions();
-
-      // 1) Структурні дії по DOM
+      // 1) Структурні дії
       if (opts.removeImages) queryAll(root, 'img').forEach(el => el.remove());
-      if (opts.removeLinks) queryAll(root, 'a').forEach(el => unwrap(el));
-      if (opts.spanDivToP) queryAll(root, 'span, div').forEach(el => replaceTag(el, 'p'));
-      if (opts.removePInTables) queryAll(root, 'table p, thead p, tbody p, tr p, td p, th p').forEach(p => unwrap(p));
-      if (opts.strongToH2) queryAll(root, 'strong').forEach(el => replaceTag(el, 'h2'));
-      if (opts.emToH3) queryAll(root, 'em, i').forEach(el => replaceTag(el, 'h3'));
+      if (opts.removeLinks)  queryAll(root, 'a').forEach(el => unwrap(el));
+      if (opts.removeTables) queryAll(root, 'table, thead, tbody, tfoot, tr, td, th').forEach(el => unwrap(el));
 
-      // Замінити теги таблиць на порожні <p>
-      if (opts.tableToEmptyP) {
-        queryAll(root, 'table, thead, tbody, tr, td, th').forEach(el => {
-          const p = document.createElement('p'); el.replaceWith(p);
+      if (opts.removeInline) queryAll(root, '[style]').forEach(el => el.removeAttribute('style'));
+      if (opts.removeClassId){
+        queryAll(root,'[class]').forEach(el=>el.removeAttribute('class'));
+        queryAll(root,'[id]').forEach(el=>el.removeAttribute('id'));
+      }
+      if (opts.removeAttrs) queryAll(root,'*').forEach(el => { [...el.attributes].forEach(a=>el.removeAttribute(a.name)); });
+
+      if (opts.strongToH2) queryAll(root, 'strong').forEach(el => replaceTag(el,'h2'));
+      if (opts.emToH3)     queryAll(root, 'em, i').forEach(el => replaceTag(el,'h3'));
+
+      // 2) Білий список — лишаємо тільки обрані теги (решту розгортаємо)
+      if (opts.wlEnabled){
+        const allowed = new Set(wlChecks().filter(cb=>cb.checked).map(cb=>cb.value));
+
+        // Проходимо всі елементи глибинно і розгортаємо те, що не дозволено
+        const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+        const toFix = [];
+        for (let n = walker.nextNode(); n; n = walker.nextNode()){
+          if (n === root) continue;
+          toFix.push(n);
+        }
+        // Спочатку від найглибших — щоб не збивати ітерацію
+        toFix.reverse().forEach(el => {
+          const tag = el.tagName.toLowerCase();
+          if (!allowed.has(tag)){
+            // особливі інлайни типу <span>, <font> і т.п. — просто розгортаємо
+            unwrap(el);
+          }
+        });
+
+        // Огортаємо "голі" текстові вузли верхнього рівня у <p>, щоб рядки не лишались без тегів
+        Array.from(root.childNodes).forEach(node=>{
+          if (node.nodeType===3 && node.nodeValue.trim()!==''){
+            const p = doc.createElement('p'); p.textContent = node.nodeValue; node.replaceWith(p);
+          }
         });
       }
 
-      // Розгортання таблиць (залишити вміст)
-      if (opts.removeTables) {
-        queryAll(root, 'table, thead, tbody, tr, td, th').forEach(el => unwrap(el));
-      }
-
-      if (opts.removeInline) queryAll(root, '[style]').forEach(el => el.removeAttribute('style'));
-      if (opts.removeClassId) { queryAll(root, '[class]').forEach(el => el.removeAttribute('class')); queryAll(root, '[id]').forEach(el => el.removeAttribute('id')); }
-      if (opts.removeAttrs) { queryAll(root, '*').forEach(el => { [...el.attributes].forEach(a => el.removeAttribute(a.name)); }); }
-
-      if (opts.removeEmpty || opts.removeOneNbsp) {
-        let changed; const onlyNbsp = /^(\s|\u00A0|&nbsp;)*$/;
-        do {
-          changed = false;
-          queryAll(root, '*').forEach(el => {
-            const inner = el.innerHTML || '';
-            const noChildren = !el.firstElementChild;
-            if (opts.removeEmpty && noChildren && inner.trim() === '') { el.remove(); changed = true; return; }
-            if (opts.removeOneNbsp && noChildren && onlyNbsp.test(inner)) { el.remove(); changed = true; }
-          });
-        } while (changed);
-      }
-
-      // Нормалізація абзаців <p>
-      (function normalizeP(){
-        queryAll(root, 'p p').forEach(inner => unwrap(inner));
-        const isBlank = (el) => (!el.textContent || el.textContent.replace(/\u00A0|\s/g,'')==='') && !el.firstElementChild;
-        let changed;
-        do {
-          changed = false;
-          const ps = queryAll(root, 'p');
-          for (let i=0; i<ps.length-1; i++){
-            const a = ps[i], b = ps[i+1];
-            if (isBlank(a) && isBlank(b)) { b.remove(); changed = true; break; }
-          }
-        } while (changed);
-      })();
-
-      // === ЗАСТОСУВАННЯ БІЛОГО СПИСКУ (лише цей блок ми додали) ===
-      if (wl.enabled) {
-        applyWhitelist(root, doc, wl.allowed);
-      }
-
-      // 2) Серіалізація у рядок для текстових операцій
+      // 3) Текстові заміни в HTML
       html = root.innerHTML;
-      if (opts.nbspToSpace) { html = html.replace(/&nbsp;|\u00A0/g, ' '); }
-      if (opts.removeSuccNbsp) { html = html.replace(/(?:&nbsp;|\u00A0){2,}/g, ' '); }
 
-      if (opts.removeAllTags) {
+      if (opts.nbspToSpace){
+        html = html.replace(/&nbsp;|\u00A0/g, ' ');   // NBSP → пробіл
+        html = html.replace(/ {2,}/g, ' ');          // послідовність пробілів → 1
+      }
+      if (opts.removeOneNbsp){
+        // після попереднього кроку залишатимуться тільки пробіли — порожні елементи приберемо нижче
         const tmp = parser.parseFromString(`<div>${html}</div>`, 'text/html');
-        html = (tmp.body.firstElementChild?.textContent || '').trim();
+        const tmpRoot = tmp.body.firstElementChild;
+        let changed;
+        do{
+          changed = false;
+          queryAll(tmpRoot,'*').forEach(el=>{
+            if (!el.firstElementChild && (el.textContent||'').trim()===''){ el.remove(); changed = true; }
+          });
+        }while(changed);
+        html = tmpRoot.innerHTML;
       }
 
-      // 3) Пошук/Заміна — суто літеральна, глобальна
+      // 4) Пошук/Заміна
       const rows = Array.from(findBox.querySelectorAll('.find-row'));
       for (const row of rows) {
         const [findInput, replInput] = row.querySelectorAll('input');
@@ -525,10 +474,12 @@
         html = html.replace(new RegExp(esc, 'g'), repl);
       }
 
+      // 5) Вивід
       codeArea.value = prettyHtml(html);
+      editor.innerHTML = codeArea.value; // оновимо і ліву панель, щоб все було синхронно
     });
 
-    // Початковий хінт
+    // Початковий текст-підказка
     editor.innerHTML = '<p><strong>Ласкаво просимо!</strong> Вставте текст ліворуч. Праворуч з’явиться HTML-код. Оберіть опції очищення і натисніть <em>Очистити</em>.</p>';
     syncToCode();
   </script>
