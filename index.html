@@ -79,7 +79,7 @@
 </head>
 <body>
   <header>
-    <h1>Очищувач HTML (MVP) — версія 8</h1>
+    <h1>Очищувач HTML (MVP) — версія 10</h1>
     <button id="themeToggle" type="button">🌙 Нічна тема</button>
   </header>
 
@@ -186,6 +186,7 @@
     const editor   = document.getElementById('editor');
     const codeRaw  = document.getElementById('codeRaw');
     const codeView = document.getElementById('codeView');
+    const codePre  = document.getElementById('codePre');
     const blockFormat = document.getElementById('blockFormat');
     const mkLink   = document.getElementById('mkLink');
     const rmLink   = document.getElementById('rmLink');
@@ -195,6 +196,18 @@
     const fontMinus= document.getElementById('fontMinus');
     const btnCopy  = document.getElementById('btnCopy');
     const undoBtn  = document.getElementById('btnUndo');
+
+    // Синхронізація висоти панелей (editor <-> codePre)
+const ro = new ResizeObserver(entries => {
+  for (const e of entries) {
+    const h = e.target.clientHeight + 'px';
+    if (e.target === editor)  codePre.style.height = h;
+    if (e.target === codePre) editor.style.height  = h;
+  }
+});
+ro.observe(editor);
+ro.observe(codePre);
+
 
     /* ===== Тулбар ===== */
     document.querySelectorAll('.toolbar [data-cmd]').forEach(btn=>{
@@ -291,6 +304,9 @@
       const parser=new DOMParser();
       const doc=parser.parseFromString(`<div id="__root">${raw}</div>`,'text/html');
       const root=doc.getElementById('__root');
+      // Глобально: всі <div> → <p>
+queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
+
       root.querySelectorAll('script,style').forEach(n=>n.remove());
       root.querySelectorAll('b').forEach(n=>replaceTag(n,'strong'));
       root.querySelectorAll('i').forEach(n=>replaceTag(n,'em'));
@@ -455,7 +471,6 @@ queryAll(root, 'div').forEach(el => replaceTag(el, 'p'));
       if (opts.removeImages) queryAll(root,'img').forEach(el=>el.remove());
       if (opts.removeLinks)  queryAll(root,'a').forEach(el=>unwrap(el));
       if (opts.removeSpan) queryAll(root, 'span').forEach(el => unwrap(el)); // видаляємо лише тег <span>, залишаючи вміст
-    }
       if (opts.removePInTables) queryAll(root,'table p, thead p, tbody p, tr p, td p, th p').forEach(p=>unwrap(p));
       if (opts.strongToH2) queryAll(root,'strong').forEach(el=>replaceTag(el,'h2'));
       if (opts.emToH3)     queryAll(root,'em, i').forEach(el=>replaceTag(el,'h3'));
